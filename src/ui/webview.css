@@ -1,0 +1,306 @@
+body {
+  padding: 0;
+  margin: 0;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  color: var(--vscode-foreground);
+  background-color: var(--vscode-sideBar-background);
+}
+
+.container {
+  padding: 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.empty-state p {
+  margin: 8px 0;
+}
+
+.empty-state .hint {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* Add Server Form (inline, collapsible) */
+.add-server-form-container {
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.add-server-form-container h3 {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* Error container with actions */
+.error-container {
+  margin-bottom: 12px;
+}
+
+.error-message {
+  padding: 8px;
+  margin-bottom: 8px;
+  background-color: var(--vscode-inputValidation-errorBackground);
+  border: 1px solid var(--vscode-inputValidation-errorBorder);
+  border-radius: 3px;
+  color: var(--vscode-errorForeground);
+  font-size: 12px;
+}
+
+.error-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.error-actions vscode-button {
+  font-size: 12px;
+}
+
+/* Error Details Dialog */
+.error-details {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.error-detail-item {
+  margin-bottom: 16px;
+}
+
+.error-detail-item strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--vscode-foreground);
+}
+
+.error-detail-item pre {
+  background-color: var(--vscode-textCodeBlock-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 3px;
+  padding: 8px;
+  margin: 4px 0;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-x: auto;
+}
+
+.error-detail-item .stack-trace {
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: var(--vscode-editor-font-family);
+}
+
+.server-card {
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.server-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.server-info {
+  flex: 1;
+}
+
+.server-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.server-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-connected {
+  background-color: var(--vscode-testing-iconPassed);
+  color: var(--vscode-editor-background);
+}
+
+.status-connecting {
+  background-color: var(--vscode-notificationsWarningIcon-foreground);
+  color: var(--vscode-editor-background);
+}
+
+.status-disconnected {
+  background-color: var(--vscode-descriptionForeground);
+  color: var(--vscode-editor-background);
+}
+
+.status-error {
+  background-color: var(--vscode-errorForeground);
+  color: var(--vscode-editor-background);
+}
+
+.error-message {
+  padding: 8px;
+  margin-bottom: 12px;
+  background-color: var(--vscode-inputValidation-errorBackground);
+  border: 1px solid var(--vscode-inputValidation-errorBorder);
+  border-radius: 3px;
+  color: var(--vscode-errorForeground);
+  font-size: 12px;
+}
+
+.tools-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.tools-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground);
+}
+
+.no-tools {
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  font-style: italic;
+  margin: 8px 0;
+}
+
+.tools-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tool-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  background-color: var(--vscode-sideBar-background);
+  border-radius: 3px;
+}
+
+.tool-info {
+  flex: 1;
+}
+
+.tool-description {
+  margin: 4px 0 0 24px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.custom-name {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+  margin-left: 8px;
+}
+
+/* Dialog styles */
+.dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog-content {
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  padding: 20px;
+  min-width: 400px;
+  max-width: 90%;
+}
+
+.dialog-content h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.form-group vscode-text-field {
+  width: 100%;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+/* Codicons */
+.codicon {
+  font-family: 'codicon';
+  font-size: 16px;
+}
+
+/* VSCode component overrides */
+vscode-button {
+  margin: 0;
+}

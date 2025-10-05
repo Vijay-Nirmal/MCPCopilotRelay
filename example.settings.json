@@ -1,0 +1,74 @@
+{
+    "mcpCopilotRelay.servers": [
+        {
+            "name": "filesystem",
+            "transport": "stdio",
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-filesystem",
+                "/path/to/allowed/directory"
+            ],
+            "enabled": true
+        },
+        {
+            "name": "github",
+            "transport": "stdio",
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-github"
+            ],
+            "env": {
+                "GITHUB_PERSONAL_ACCESS_TOKEN": "your-github-token-here"
+            },
+            "enabled": true
+        },
+        {
+            "name": "sqlite",
+            "transport": "stdio",
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-sqlite",
+                "/path/to/database.db"
+            ],
+            "enabled": true
+        },
+        {
+            "name": "custom-node-server",
+            "transport": "stdio",
+            "command": "node",
+            "args": [
+                "path/to/your/server.js"
+            ],
+            "env": {
+                "API_KEY": "your-api-key",
+                "DEBUG": "true"
+            },
+            "enabled": true
+        },
+        {
+            "name": "python-server",
+            "transport": "stdio",
+            "command": "python",
+            "args": [
+                "-m",
+                "your_mcp_module"
+            ],
+            "env": {
+                "PYTHONPATH": "/path/to/your/python/modules"
+            },
+            "enabled": true
+        },
+        {
+            "name": "remote-mcp-server",
+            "transport": "sse",
+            "url": "https://your-server.com/mcp",
+            "apiKey": "your-api-key-here",
+            "enabled": true
+        }
+    ],
+    "mcpCopilotRelay.autoReconnect": true,
+    "mcpCopilotRelay.reconnectDelay": 5000
+}

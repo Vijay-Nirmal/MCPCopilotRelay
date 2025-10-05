@@ -1,0 +1,173 @@
+{
+  "name": "mcp-copilot-relay",
+  "displayName": "MCP Copilot Relay",
+  "description": "Bridge MCP (Model Context Protocol) servers to VSCode's Language Model Tools API",
+  "version": "0.1.0",
+  "publisher": "your-publisher-name",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/mcp-copilot-relay"
+  },
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "copilot",
+    "ai",
+    "tools",
+    "language-model"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mcp-copilot-relay.showPanel",
+        "title": "MCP Copilot Relay: Show Panel",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "mcp-copilot-relay.refreshServers",
+        "title": "MCP Copilot Relay: Refresh Servers",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mcp-copilot-relay.addServer",
+        "title": "MCP Copilot Relay: Add Server"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "mcp-copilot-relay",
+          "title": "MCP Copilot Relay",
+          "icon": "$(plug)"
+        }
+      ]
+    },
+    "views": {
+      "mcp-copilot-relay": [
+        {
+          "type": "webview",
+          "id": "mcp-copilot-relay.panel",
+          "name": "MCP Servers"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "MCP Copilot Relay",
+      "properties": {
+        "mcpCopilotRelay.servers": {
+          "type": "array",
+          "default": [],
+          "description": "MCP server configurations",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Server name (used as namespace)"
+              },
+              "transport": {
+                "type": "string",
+                "enum": [
+                  "stdio",
+                  "sse"
+                ],
+                "default": "stdio",
+                "description": "Transport type: 'stdio' for local process, 'sse' for remote server"
+              },
+              "command": {
+                "type": "string",
+                "description": "Command to execute (required for stdio transport)"
+              },
+              "args": {
+                "type": "array",
+                "description": "Command arguments (for stdio transport)",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "env": {
+                "type": "object",
+                "description": "Environment variables (for stdio transport)"
+              },
+              "url": {
+                "type": "string",
+                "description": "Server URL (required for SSE transport)"
+              },
+              "apiKey": {
+                "type": "string",
+                "description": "API key for authentication (optional for SSE transport)"
+              },
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether server is enabled",
+                "default": true
+              }
+            },
+            "required": [
+              "name",
+              "transport"
+            ]
+          }
+        },
+        "mcpCopilotRelay.toolStates": {
+          "type": "object",
+          "default": {},
+          "description": "Tool enable/disable states and custom names"
+        },
+        "mcpCopilotRelay.autoReconnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically reconnect to servers on failure"
+        },
+        "mcpCopilotRelay.reconnectDelay": {
+          "type": "number",
+          "default": 5000,
+          "description": "Delay before reconnection attempt (ms)"
+        }
+      }
+    },
+    "languageModelTools": []
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.95.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8",
+    "copy-webpack-plugin": "^11.0.0",
+    "eslint": "^8.56.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.3.3",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@vscode/codicons": "^0.0.35",
+    "@vscode/webview-ui-toolkit": "^1.4.0"
+  }
+}

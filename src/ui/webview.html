@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP Copilot Relay</title>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>MCP Servers</h2>
+      <vscode-button id="add-server-main-btn">
+        <span class="codicon codicon-add"></span>
+        Add Server
+      </vscode-button>
+    </div>
+
+    <div id="servers-container"></div>
+
+    <!-- Add Server Dialog -->
+    <div id="add-server-dialog" class="dialog" style="display: none;">
+      <div class="dialog-content">
+        <h3>Add MCP Server</h3>
+        <form id="add-server-form">
+          <div class="form-group">
+            <label for="server-name">Name:</label>
+            <vscode-text-field id="server-name" required></vscode-text-field>
+          </div>
+
+          <div class="form-group">
+            <label for="server-command">Command:</label>
+            <vscode-text-field id="server-command" placeholder="e.g., node, python, npx" required></vscode-text-field>
+          </div>
+
+          <div class="form-group">
+            <label for="server-args">Arguments (comma-separated):</label>
+            <vscode-text-field id="server-args" placeholder="e.g., server.js, --port, 8080"></vscode-text-field>
+          </div>
+
+          <div class="dialog-actions">
+            <vscode-button type="submit">Add</vscode-button>
+            <vscode-button appearance="secondary" type="button" id="cancel-add-server">Cancel</vscode-button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
