@@ -108,14 +108,14 @@ export class MCPClient {
         const headers: Record<string, string> = {
           ...(this.config.headers || {})
         };
-        
+
         if (this.config.apiKey) {
           headers['Authorization'] = `Bearer ${this.config.apiKey}`;
         }
 
         this.transport = new StreamableHTTPClientTransport(
           new URL(this.config.url),
-          { 
+          {
             requestInit: {
               headers
             }

@@ -186,7 +186,7 @@ function toggleAddServerForm() {
 function hideAddServerForm() {
   const formContainer = document.getElementById('add-server-form-container');
   formContainer.style.display = 'none';
-  
+
   // Reset form
   document.getElementById('server-name').value = '';
   document.getElementById('server-command').value = '';
@@ -195,7 +195,7 @@ function hideAddServerForm() {
   document.getElementById('server-apikey').value = '';
   document.getElementById('server-http-url').value = '';
   document.getElementById('server-http-apikey').value = '';
-}function showErrorDetails(serverName, errorMessage, errorStack) {
+} function showErrorDetails(serverName, errorMessage, errorStack) {
   const dialog = document.getElementById('error-details-dialog');
   const content = document.getElementById('error-details-content');
 
@@ -228,12 +228,12 @@ function handleTransportChange(e) {
   const stdioFields = document.getElementById('stdio-fields');
   const sseFields = document.getElementById('sse-fields');
   const httpFields = document.getElementById('http-fields');
-  
+
   // Hide all transport-specific fields first
   stdioFields.style.display = 'none';
   sseFields.style.display = 'none';
   httpFields.style.display = 'none';
-  
+
   // Show the relevant fields based on transport type
   if (transport === 'sse') {
     sseFields.style.display = 'block';
@@ -242,13 +242,13 @@ function handleTransportChange(e) {
   } else {
     stdioFields.style.display = 'block';
   }
-}function handleAddServer(e) {
+} function handleAddServer(e) {
   e.preventDefault();
-  
+
   const name = document.getElementById('server-name').value;
   const transportDropdown = document.getElementById('server-transport');
   const transport = transportDropdown.value || transportDropdown.currentValue || 'stdio';
-  
+
   const config = {
     name,
     transport,
@@ -259,12 +259,12 @@ function handleTransportChange(e) {
     // SSE (legacy remote) server
     const url = document.getElementById('server-url').value;
     const apiKey = document.getElementById('server-apikey').value;
-    
+
     if (!url) {
       alert('Server URL is required for SSE transport');
       return;
     }
-    
+
     config.url = url;
     if (apiKey) {
       config.apiKey = apiKey;
@@ -273,12 +273,12 @@ function handleTransportChange(e) {
     // HTTP (modern remote) server
     const url = document.getElementById('server-http-url').value;
     const apiKey = document.getElementById('server-http-apikey').value;
-    
+
     if (!url) {
       alert('Server URL is required for HTTP transport');
       return;
     }
-    
+
     config.url = url;
     if (apiKey) {
       config.apiKey = apiKey;
@@ -288,12 +288,12 @@ function handleTransportChange(e) {
     const command = document.getElementById('server-command').value;
     const argsInput = document.getElementById('server-args').value;
     const args = argsInput ? argsInput.split(',').map(arg => arg.trim()).filter(arg => arg) : [];
-    
+
     if (!command) {
       alert('Command is required for stdio transport');
       return;
     }
-    
+
     config.command = command;
     config.args = args;
   }
@@ -304,7 +304,7 @@ function handleTransportChange(e) {
   });
 
   hideAddServerForm();
-}function escapeHtml(text) {
+} function escapeHtml(text) {
   const map = {
     '&': '&amp;',
     '<': '&lt;',
