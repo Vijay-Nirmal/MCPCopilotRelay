@@ -1,13 +1,15 @@
 export interface ServerConfig {
   name: string;
-  transport: 'stdio' | 'sse';
+  transport: 'stdio' | 'sse' | 'http';
   // For stdio transport
   command?: string;
   args?: string[];
   env?: Record<string, string>;
-  // For SSE transport
+  // For SSE and HTTP transport
   url?: string;
   apiKey?: string;
+  // For HTTP transport (optional headers)
+  headers?: Record<string, string>;
   // Common
   enabled?: boolean;
 }

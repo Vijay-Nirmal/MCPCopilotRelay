@@ -226,8 +226,9 @@ export class MCPRelayExtension {
 
     const transport = await vscode.window.showQuickPick(
       [
-        { label: 'Stdio (Local Process)', value: 'stdio' },
-        { label: 'SSE (Remote Server)', value: 'sse' }
+        { label: 'Local Process (stdio)', value: 'stdio' },
+        { label: 'Remote Server (HTTP)', value: 'http' },
+        { label: 'Remote Server (SSE)', value: 'sse' }
       ],
       {
         placeHolder: 'Select transport type'
@@ -239,7 +240,7 @@ export class MCPRelayExtension {
     }
 
     if (transport.value === 'sse') {
-      // Remote SSE server
+      // Remote SSE server (legacy)
       const url = await vscode.window.showInputBox({
         prompt: 'Enter server URL',
         placeHolder: 'https://example.com/mcp',
@@ -270,6 +271,50 @@ export class MCPRelayExtension {
         await this.configManager.addServer({
           name,
           transport: 'sse',
+          url,
+          apiKey: apiKey || undefined,
+          enabled: true
+        });
+
+        await this.connectServer(name);
+        vscode.window.showInformationMessage(`Server "${name}" added successfully`);
+      } catch (error) {
+        vscode.window.showErrorMessage(
+          `Failed to add server: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    } else if (transport.value === 'http') {
+      // Remote HTTP server (modern)
+      const url = await vscode.window.showInputBox({
+        prompt: 'Enter server URL',
+        placeHolder: 'https://api.example.com/mcp',
+        validateInput: (value: string) => {
+          if (!value) {
+            return 'URL is required';
+          }
+          try {
+            new URL(value);
+            return null;
+          } catch {
+            return 'Invalid URL format';
+          }
+        }
+      });
+
+      if (!url) {
+        return;
+      }
+
+      const apiKey = await vscode.window.showInputBox({
+        prompt: 'Enter API key (optional)',
+        placeHolder: 'Leave empty if not required',
+        password: true
+      });
+
+      try {
+        await this.configManager.addServer({
+          name,
+          transport: 'http',
           url,
           apiKey: apiKey || undefined,
           enabled: true

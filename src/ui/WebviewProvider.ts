@@ -228,6 +228,7 @@ export class MCPWebviewProvider implements vscode.WebviewViewProvider {
           <label for="server-transport">Transport Type *</label>
           <vscode-dropdown id="server-transport">
             <vscode-option value="stdio" selected>Local Process (stdio)</vscode-option>
+            <vscode-option value="http">Remote Server (HTTP)</vscode-option>
             <vscode-option value="sse">Remote Server (SSE)</vscode-option>
           </vscode-dropdown>
         </div>
@@ -255,6 +256,19 @@ export class MCPWebviewProvider implements vscode.WebviewViewProvider {
           <div class="form-group">
             <label for="server-apikey">API Key (optional)</label>
             <vscode-text-field id="server-apikey" type="password" placeholder="Your API key"></vscode-text-field>
+          </div>
+        </div>
+        
+        <!-- HTTP fields -->
+        <div id="http-fields" style="display: none;">
+          <div class="form-group">
+            <label for="server-http-url">Server URL *</label>
+            <vscode-text-field id="server-http-url" placeholder="https://api.example.com/mcp"></vscode-text-field>
+          </div>
+          
+          <div class="form-group">
+            <label for="server-http-apikey">API Key (optional)</label>
+            <vscode-text-field id="server-http-apikey" type="password" placeholder="Your API key"></vscode-text-field>
           </div>
         </div>
         

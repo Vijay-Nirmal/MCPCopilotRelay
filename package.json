@@ -80,10 +80,11 @@
                 "type": "string",
                 "enum": [
                   "stdio",
-                  "sse"
+                  "sse",
+                  "http"
                 ],
                 "default": "stdio",
-                "description": "Transport type: 'stdio' for local process, 'sse' for remote server"
+                "description": "Transport type: 'stdio' for local process, 'sse' for remote server (legacy), 'http' for remote server (modern)"
               },
               "command": {
                 "type": "string",
@@ -102,11 +103,15 @@
               },
               "url": {
                 "type": "string",
-                "description": "Server URL (required for SSE transport)"
+                "description": "Server URL (required for sse and http transports)"
               },
               "apiKey": {
                 "type": "string",
-                "description": "API key for authentication (optional for SSE transport)"
+                "description": "API key for authentication (optional for remote transports)"
+              },
+              "headers": {
+                "type": "object",
+                "description": "Custom HTTP headers (optional for http transport)"
               },
               "enabled": {
                 "type": "boolean",

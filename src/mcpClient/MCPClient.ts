@@ -1,6 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { ServerConfig, MCPTool, ConnectionStatus } from '../types';
 
 export interface MCPClientEvents {
@@ -13,7 +14,7 @@ type EventHandler = (...args: any[]) => void;
 
 export class MCPClient {
   private client: Client | null = null;
-  private transport: StdioClientTransport | SSEClientTransport | null = null;
+  private transport: StdioClientTransport | SSEClientTransport | StreamableHTTPClientTransport | null = null;
   private status: ConnectionStatus = ConnectionStatus.Disconnected;
   private discoveredTools: MCPTool[] = [];
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -84,7 +85,7 @@ export class MCPClient {
     try {
       // Create transport based on config type
       if (this.config.transport === 'sse') {
-        // SSE (Server-Sent Events) transport for remote servers
+        // SSE (Server-Sent Events) transport for remote servers (legacy)
         if (!this.config.url) {
           throw new Error('URL is required for SSE transport');
         }
@@ -97,6 +98,28 @@ export class MCPClient {
         this.transport = new SSEClientTransport(
           new URL(this.config.url),
           headers
+        );
+      } else if (this.config.transport === 'http') {
+        // HTTP (Streamable HTTP) transport for remote servers (modern)
+        if (!this.config.url) {
+          throw new Error('URL is required for HTTP transport');
+        }
+
+        const headers: Record<string, string> = {
+          ...(this.config.headers || {})
+        };
+        
+        if (this.config.apiKey) {
+          headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+        }
+
+        this.transport = new StreamableHTTPClientTransport(
+          new URL(this.config.url),
+          { 
+            requestInit: {
+              headers
+            }
+          }
         );
       } else {
         // Default to stdio transport for local servers

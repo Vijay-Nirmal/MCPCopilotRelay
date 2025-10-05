@@ -4,14 +4,14 @@ A Visual Studio Code extension that bridges Model Context Protocol (MCP) servers
 
 ## Features
 
-- 🔌 **Connect to MCP Servers**: Connect to local (stdio) or remote (SSE) MCP servers
-- 🌐 **Remote Server Support**: Connect to cloud-hosted MCP servers via HTTP/HTTPS
+- 🔌 **Connect to MCP Servers**: Connect to local (stdio) or remote (HTTP/SSE) MCP servers
+- 🌐 **Remote Server Support**: Connect to cloud-hosted MCP servers via HTTP (modern) or SSE (legacy)
 - 🔧 **Dynamic Tool Discovery**: Automatically discover and register tools from connected MCP servers
 - 🎛️ **Tool Management**: Enable/disable individual tools and customize their names
 - 📊 **Visual Management UI**: Side panel for managing servers, tools, and viewing connection status
-- 🔄 **Auto-reconnect**: Automatic reconnection on server failures
+- 🔄 **Auto-reconnect**: Automatic reconnection on server failures (limited to 3 attempts)
 - 🏷️ **Namespace Support**: Tools are namespaced by server name to avoid conflicts
-- 🔐 **Secure Remote Access**: API key authentication for remote servers
+- 🔐 **Secure Remote Access**: API key authentication and custom headers for remote servers
 - 📝 **Comprehensive Logging**: Detailed logging in the output channel
 
 ## Installation
@@ -47,7 +47,8 @@ A Visual Studio Code extension that bridges Model Context Protocol (MCP) servers
 2. Click "Add Server"
 3. Select transport type:
    - **Local Process (stdio)**: For local MCP servers running as processes
-   - **Remote Server (SSE)**: For cloud-hosted MCP servers
+   - **Remote Server (HTTP)**: For modern cloud-hosted MCP servers
+   - **Remote Server (SSE - Legacy)**: For older cloud-hosted MCP servers
 4. Enter the server details:
    
    **For Local Process (stdio):**
@@ -84,13 +85,28 @@ Add server configurations to your `settings.json`:
 }
 ```
 
-**Remote Server (SSE) example:**
+**Remote Server (SSE - Legacy) example:**
 ```json
 {
   "mcpCopilotRelay.servers": [
     {
-      "name": "my-remote-server",
+      "name": "my-legacy-server",
       "transport": "sse",
+      "url": "https://api.example.com/mcp",
+      "apiKey": "your-api-key-here",
+      "enabled": true
+    }
+  ]
+}
+```
+
+**Remote Server (HTTP - Modern) example:**
+```json
+{
+  "mcpCopilotRelay.servers": [
+    {
+      "name": "my-modern-server",
+      "transport": "http",
       "url": "https://api.example.com/mcp",
       "apiKey": "your-api-key-here",
       "enabled": true
@@ -112,9 +128,15 @@ Add server configurations to your `settings.json`:
     },
     {
       "name": "cloud-mcp-service",
-      "transport": "sse",
+      "transport": "http",
       "url": "https://mcp.myservice.com/api",
       "apiKey": "sk_live_abc123",
+      "enabled": true
+    },
+    {
+      "name": "legacy-sse-server",
+      "transport": "sse",
+      "url": "https://legacy.example.com/sse",
       "enabled": true
     }
   ]
@@ -163,16 +185,21 @@ This extension contributes the following settings:
 ```typescript
 interface ServerConfig {
   name: string;                      // Unique server identifier
-  transport: 'stdio' | 'sse';        // Transport type
+  transport: 'stdio' | 'sse' | 'http';  // Transport type
   
   // For stdio transport (local process)
   command?: string;                  // Executable command (required for stdio)
   args?: string[];                   // Command arguments
   env?: Record<string, string>;      // Environment variables
   
-  // For SSE transport (remote server)
+  // For SSE transport (legacy remote server)
   url?: string;                      // Server URL (required for sse)
   apiKey?: string;                   // Authentication token
+  
+  // For HTTP transport (modern remote server)
+  url?: string;                      // Server URL (required for http)
+  apiKey?: string;                   // Authentication token
+  headers?: Record<string, string>;  // Custom HTTP headers
   
   enabled?: boolean;                 // Whether server should be active (default: true)
 }

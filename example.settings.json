@@ -62,11 +62,18 @@
             "enabled": true
         },
         {
-            "name": "remote-mcp-server",
-            "transport": "sse",
-            "url": "https://your-server.com/mcp",
+            "name": "modern-http-server",
+            "transport": "http",
+            "url": "https://api.example.com/mcp",
             "apiKey": "your-api-key-here",
             "enabled": true
+        },
+        {
+            "name": "legacy-sse-server",
+            "transport": "sse",
+            "url": "https://legacy-server.com/sse",
+            "apiKey": "your-api-key-here",
+            "enabled": false
         }
     ],
     "mcpCopilotRelay.autoReconnect": true,
