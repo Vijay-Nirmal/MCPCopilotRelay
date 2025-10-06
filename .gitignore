@@ -1,0 +1,14 @@
+node_modules/
+dist/
+out/
+output/
+*.vsix
+*.log
+.DS_Store
+.env
+.vscode-test/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+.cache/
+my-extensions/
