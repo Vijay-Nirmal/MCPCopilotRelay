@@ -28,7 +28,7 @@ export interface ExtensionConfig {
     resources?: Array<{ uri: string; name: string; selected: boolean }>;
   };
   mappings: {
-    tools: Record<string, { type: 'lm-tool' | 'command'; displayName: string; description: string }>;
+    tools: Record<string, { type: 'lm-tool' | 'command'; toolId?: string; displayName: string; description: string }>;
     prompts: Record<string, { type: 'chat-participant'; displayName: string; description: string; slashCommand?: string }>;
   };
   settings: Record<string, { 
@@ -57,7 +57,7 @@ export interface ExtensionConfig {
   };
 }
 
-export async function buildFromConfig(config: ExtensionConfig, outputDir: string) {
+export async function buildFromConfig(config: ExtensionConfig, outputDir: string, editedFiles?: Record<string, string>) {
   const extensionDir = path.join(outputDir, config.extension.name);
   const srcDir = path.join(extensionDir, 'src');
   const imagesDir = path.join(extensionDir, 'images');
@@ -71,19 +71,24 @@ export async function buildFromConfig(config: ExtensionConfig, outputDir: string
     await mkdir(imagesDir, { recursive: true });
   }
 
-  // Generate files
-  const packageJson = generatePackageJson(config);
-  const extensionTs = generateExtensionTs(config);
-  const mcpClientTs = generateMcpClientTs(config);
-  const readme = generateReadme(config);
-  const tsconfig = generateTsConfig();
+  // Generate files (use edited versions if available)
+  const packageJsonContent = editedFiles?.['package.json'] || JSON.stringify(generatePackageJson(config), null, 2);
+  const extensionTsContent = editedFiles?.['extension.ts'] || generateExtensionTs(config);
+  const mcpClientTsContent = editedFiles?.['mcp-client.ts'] || generateMcpClientTs(config);
+  const readmeContent = editedFiles?.['README.md'] || generateReadme(config);
+  const tsconfigContent = editedFiles?.['tsconfig.json'] || JSON.stringify(generateTsConfig(), null, 2);
+
+  console.log('📝 Writing files...');
+  if (editedFiles && Object.keys(editedFiles).length > 0) {
+    console.log(`📄 Using ${Object.keys(editedFiles).length} edited file(s): ${Object.keys(editedFiles).join(', ')}`);
+  }
 
   // Write files
-  await writeFile(path.join(extensionDir, 'package.json'), JSON.stringify(packageJson, null, 2));
-  await writeFile(path.join(srcDir, 'extension.ts'), extensionTs);
-  await writeFile(path.join(srcDir, 'mcp-client.ts'), mcpClientTs);
-  await writeFile(path.join(extensionDir, 'README.md'), readme);
-  await writeFile(path.join(extensionDir, 'tsconfig.json'), JSON.stringify(tsconfig, null, 2));
+  await writeFile(path.join(extensionDir, 'package.json'), packageJsonContent);
+  await writeFile(path.join(srcDir, 'extension.ts'), extensionTsContent);
+  await writeFile(path.join(srcDir, 'mcp-client.ts'), mcpClientTsContent);
+  await writeFile(path.join(extensionDir, 'README.md'), readmeContent);
+  await writeFile(path.join(extensionDir, 'tsconfig.json'), tsconfigContent);
   
   // Copy icon file if provided
   if (config.extension.iconFileData && config.extension.iconFileName) {

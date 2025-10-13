@@ -59,13 +59,14 @@ function generateToolRegistrations(config: ExtensionConfig): string {
   let code = '\n  // Register Language Model Tools\n';
   
   for (const [toolName, mapping] of Object.entries(config.mappings.tools)) {
+    const toolId = mapping.toolId || toolName; // Use toolId if available, fallback to original name
     if (mapping.type === 'lm-tool') {
       code += `  context.subscriptions.push(
-    vscode.lm.registerTool('${toolName}', new ${capitalize(toolName)}Tool())
+    vscode.lm.registerTool('${toolId}', new ${capitalize(toolId)}Tool())
   );\n`;
     } else if (mapping.type === 'command') {
       code += `  context.subscriptions.push(
-    vscode.commands.registerCommand('${config.extension.name}.${toolName}', handle${capitalize(toolName)}Command)
+    vscode.commands.registerCommand('${config.extension.name}.${toolId}', handle${capitalize(toolId)}Command)
   );\n`;
     }
   }
@@ -97,9 +98,11 @@ function generateToolHandlers(config: ExtensionConfig): string {
     const tool = config.capabilities.tools?.find(t => t.name === toolName);
     if (!tool) continue;
 
+    const toolId = mapping.toolId || toolName; // Use toolId for VS Code identifiers
+    
     if (mapping.type === 'lm-tool') {
       code += `
-class ${capitalize(toolName)}Tool implements vscode.LanguageModelTool<any> {
+class ${capitalize(toolId)}Tool implements vscode.LanguageModelTool<any> {
   async prepareInvocation(
     options: vscode.LanguageModelToolInvocationPrepareOptions<any>,
     _token: vscode.CancellationToken
@@ -118,21 +121,23 @@ class ${capitalize(toolName)}Tool implements vscode.LanguageModelTool<any> {
     _token: vscode.CancellationToken
   ): Promise<vscode.LanguageModelToolResult> {
     try {
+      // Use original toolName for MCP server call, toolId is just for VS Code
       const result = await mcpClient.callTool('${toolName}', options.input);
       
       return new vscode.LanguageModelToolResult([
         new vscode.LanguageModelTextPart(JSON.stringify(result, null, 2))
       ]);
     } catch (error) {
-      throw new Error(\`Failed to invoke ${toolName}: \${error}\`);
+      throw new Error(\`Failed to invoke ${toolId}: \${error}\`);
     }
   }
 }
 `;
     } else if (mapping.type === 'command') {
       code += `
-async function handle${capitalize(toolName)}Command(...args: any[]) {
+async function handle${capitalize(toolId)}Command(...args: any[]) {
   try {
+    // Use original toolName for MCP server call, toolId is just for VS Code
     const result = await mcpClient.callTool('${toolName}', args[0] || {});
     vscode.window.showInformationMessage(\`Result: \${JSON.stringify(result)}\`);
   } catch (error) {

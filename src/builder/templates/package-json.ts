@@ -94,9 +94,10 @@ export function generatePackageJson(config: ExtensionConfig) {
     if (mapping.type === 'lm-tool') {
       // Find the tool in capabilities to get full schema
       const tool = config.capabilities.tools?.find(t => t.name === toolName);
+      const toolId = mapping.toolId || toolName;
       
       lmTools.push({
-        name: toolName, // Just the tool name without prefix
+        name: toolId, // Use custom toolId if provided
         modelDescription: `${mapping.description}. ${tool?.description || ''}`.trim(),
         tags: ['mcp', config.extension.name],
         inputSchema: tool?.inputSchema || {
@@ -105,13 +106,13 @@ export function generatePackageJson(config: ExtensionConfig) {
         },
         canBeReferencedInPrompt: true,
         displayName: mapping.displayName,
-        toolReferenceName: toolName,
+        toolReferenceName: toolId,
         userDescription: mapping.description,
         icon: '$(tools)',
       });
       
       // Add specific activation event for this tool
-      packageJson.activationEvents.push(`onLanguageModelTool:${toolName}`);
+      packageJson.activationEvents.push(`onLanguageModelTool:${toolId}`);
     }
   }
 
@@ -123,11 +124,12 @@ export function generatePackageJson(config: ExtensionConfig) {
   const commands: any[] = [];
   for (const [toolName, mapping] of Object.entries(config.mappings.tools)) {
     if (mapping.type === 'command') {
+      const toolId = mapping.toolId || toolName;
       commands.push({
-        command: `${config.extension.name}.${toolName}`,
+        command: `${config.extension.name}.${toolId}`,
         title: mapping.displayName,
       });
-      packageJson.activationEvents.push(`onCommand:${config.extension.name}.${toolName}`);
+      packageJson.activationEvents.push(`onCommand:${config.extension.name}.${toolId}`);
     }
   }
 

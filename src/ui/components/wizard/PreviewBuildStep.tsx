@@ -77,6 +77,7 @@ export function PreviewBuildStep() {
     setBuildSuccess(false);
 
     try {
+      console.log('🚀 Starting extension build process...');
       // Prepare the full configuration
       const config = {
         mcpConfig,
@@ -87,22 +88,49 @@ export function PreviewBuildStep() {
         editedFiles, // Include any manually edited files
       };
 
-      // Call the build API
+      // Call the build API with increased timeout
+      console.log('📦 Sending build request...');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('⏰ Build request timed out after 5 minutes');
+        controller.abort();
+      }, 300000); // 5 minutes timeout
+      
       const response = await fetch('http://localhost:3000/api/build', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(config),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
+      console.log('✅ Build request completed');
 
       if (!response.ok) {
+        let errorMessage = 'Build failed';
+        try {
+          const error = await response.json();
+          errorMessage = error.message || errorMessage;
+        } catch {
+          errorMessage = `Build failed with status ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Check content type
+      const contentType = response.headers.get('Content-Type');
+      if (contentType && contentType.includes('application/json')) {
+        // Server returned JSON error instead of file
         const error = await response.json();
         throw new Error(error.message || 'Build failed');
       }
 
-      // Get the VSIX file as a blob
+      // Get the VSIX file as a blob with progress indication
+      console.log('Downloading VSIX file...');
       const blob = await response.blob();
+      console.log(`Downloaded VSIX file: ${(blob.size / 1024 / 1024).toFixed(2)} MB`);
       
       // Create download link
       const url = window.URL.createObjectURL(blob);
@@ -173,10 +201,18 @@ export function PreviewBuildStep() {
         <CardContent>
           <Tabs defaultValue="package.json" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="package.json">package.json</TabsTrigger>
-              <TabsTrigger value="extension.ts">extension.ts</TabsTrigger>
-              <TabsTrigger value="mcp-client.ts">mcp-client.ts</TabsTrigger>
-              <TabsTrigger value="README.md">README.md</TabsTrigger>
+              <TabsTrigger value="package.json">
+                package.json {editedFiles['package.json'] !== undefined && <span className="ml-1 text-xs text-orange-500">●</span>}
+              </TabsTrigger>
+              <TabsTrigger value="extension.ts">
+                extension.ts {editedFiles['extension.ts'] !== undefined && <span className="ml-1 text-xs text-orange-500">●</span>}
+              </TabsTrigger>
+              <TabsTrigger value="mcp-client.ts">
+                mcp-client.ts {editedFiles['mcp-client.ts'] !== undefined && <span className="ml-1 text-xs text-orange-500">●</span>}
+              </TabsTrigger>
+              <TabsTrigger value="README.md">
+                README.md {editedFiles['README.md'] !== undefined && <span className="ml-1 text-xs text-orange-500">●</span>}
+              </TabsTrigger>
             </TabsList>
             
             {Object.entries(generatedFiles).map(([filename, content]) => {
@@ -250,6 +286,15 @@ export function PreviewBuildStep() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {Object.keys(editedFiles).length > 0 && (
+            <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+              <FileCode className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <AlertDescription className="text-blue-600 dark:text-blue-400">
+                {Object.keys(editedFiles).length} file(s) have been edited and will be included in the build: {Object.keys(editedFiles).join(', ')}
+              </AlertDescription>
+            </Alert>
+          )}
+
           {buildSuccess && (
             <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
               <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -282,7 +327,7 @@ export function PreviewBuildStep() {
               className="flex-1"
             >
               {isBuilding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isBuilding ? 'Building...' : 'Build VSIX'}
+              {isBuilding ? 'Building VSIX (up to 5 min)...' : 'Build VSIX'}
             </Button>
 
             <Button

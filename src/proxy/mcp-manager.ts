@@ -142,25 +142,56 @@ export class MCPManager {
     }
 
     const capabilities: MCPCapabilities = {};
+    const errors: string[] = [];
 
+    // Try to discover tools
     try {
-      // Discover tools
       const toolsResponse = await this.client.listTools();
       capabilities.tools = toolsResponse.tools;
+      console.log(`✅ Discovered ${toolsResponse.tools?.length || 0} tools`);
+    } catch (error) {
+      const errorMsg = `Failed to list tools: ${(error as Error).message}`;
+      console.warn(`⚠️  ${errorMsg}`);
+      errors.push(errorMsg);
+      capabilities.tools = [];
+    }
 
-      // Discover prompts
+    // Try to discover prompts
+    try {
       const promptsResponse = await this.client.listPrompts();
       capabilities.prompts = promptsResponse.prompts;
+      console.log(`✅ Discovered ${promptsResponse.prompts?.length || 0} prompts`);
+    } catch (error) {
+      const errorMsg = `Failed to list prompts: ${(error as Error).message}`;
+      console.warn(`⚠️  ${errorMsg}`);
+      errors.push(errorMsg);
+      capabilities.prompts = [];
+    }
 
-      // Discover resources
+    // Try to discover resources
+    try {
       const resourcesResponse = await this.client.listResources();
       capabilities.resources = resourcesResponse.resources;
-
-      this.capabilities = capabilities;
-      return capabilities;
+      console.log(`✅ Discovered ${resourcesResponse.resources?.length || 0} resources`);
     } catch (error) {
-      throw new Error(`Failed to discover capabilities: ${(error as Error).message}`);
+      const errorMsg = `Failed to list resources: ${(error as Error).message}`;
+      console.warn(`⚠️  ${errorMsg}`);
+      errors.push(errorMsg);
+      capabilities.resources = [];
     }
+
+    // If all methods failed, throw an error
+    if (errors.length === 3) {
+      throw new Error(`All discovery methods failed:\n${errors.join('\n')}`);
+    }
+
+    // If some methods failed but at least one succeeded, log warnings but continue
+    if (errors.length > 0) {
+      console.warn(`⚠️  Some discovery methods failed but continuing with available capabilities:\n${errors.join('\n')}`);
+    }
+
+    this.capabilities = capabilities;
+    return capabilities;
   }
 
   async testTool(name: string, args: Record<string, any>): Promise<any> {

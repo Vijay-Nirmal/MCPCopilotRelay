@@ -28,7 +28,8 @@ export interface MCPCapabilities {
 }
 
 export interface ToolMapping {
-  name: string;
+  name: string; // Original MCP tool name
+  toolId: string; // User-editable tool identifier used in VS Code
   selected: boolean;
   type: 'lm-tool' | 'command';
   displayName: string;

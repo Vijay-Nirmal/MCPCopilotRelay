@@ -58,7 +58,10 @@ export async function startServer(port: number) {
     exposedHeaders: ['Mcp-Session-Id'],
     allowedHeaders: ['Content-Type', 'mcp-session-id'],
   }));
-  app.use(express.json());
+  
+  // Increase payload size limit for large configurations
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
   // Health check
   app.get('/api/health', (_req, res) => {
@@ -74,6 +77,10 @@ export async function startServer(port: number) {
 
   // Build route
   app.post('/api/build', async (req, res) => {
+    // Set longer timeout for build process
+    req.setTimeout(300000); // 5 minutes
+    res.setTimeout(300000); // 5 minutes
+    
     try {
       const uiConfig = req.body;
       console.log('Building extension with UI config');
@@ -81,26 +88,63 @@ export async function startServer(port: number) {
       // Transform UI config to builder format
       const config = transformUIConfig(uiConfig);
       
+      // Extract edited files from the request
+      const editedFiles = uiConfig.editedFiles || {};
+      if (Object.keys(editedFiles).length > 0) {
+        console.log(`📝 Received ${Object.keys(editedFiles).length} edited files: ${Object.keys(editedFiles).join(', ')}`);
+      }
+      
       // Prepare the output directory (use temp dir)
       const outputDir = path.join(process.cwd(), '.build');
       
-      const result = await buildFromConfig(config, outputDir);
+      console.log('Starting VSIX build...');
+      const result = await buildFromConfig(config, outputDir, editedFiles);
+      console.log(`VSIX built successfully: ${result.vsixPath}`);
       
-      // Send the VSIX file
-      res.download(result.vsixPath, `${config.extension.name}-${config.extension.version}.vsix`, (err) => {
-        if (err) {
-          console.error('Error sending VSIX file:', err);
-          if (!res.headersSent) {
-            res.status(500).json({ error: 'Failed to send VSIX file' });
-          }
+      // Check if file exists and get its size
+      const fs = await import('fs/promises');
+      const stats = await fs.stat(result.vsixPath);
+      console.log(`VSIX file size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+      
+      // Set proper headers for file download
+      const filename = `${config.extension.name}-${config.extension.version}.vsix`;
+      res.set({
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Length': stats.size.toString(),
+        'Cache-Control': 'no-cache'
+      });
+      
+      // Stream the file instead of using res.download for better control
+      const readStream = (await import('fs')).createReadStream(result.vsixPath);
+      
+      readStream.on('error', (err) => {
+        console.error('Error reading VSIX file:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Failed to read VSIX file', message: err.message });
         }
       });
+      
+      res.on('error', (err) => {
+        console.error('Error sending VSIX file:', err);
+        readStream.destroy();
+      });
+      
+      res.on('close', () => {
+        console.log('Client disconnected during VSIX transfer');
+        readStream.destroy();
+      });
+      
+      readStream.pipe(res);
+      
     } catch (error) {
       console.error('Build error:', error);
-      res.status(500).json({ 
-        error: 'Build failed', 
-        message: (error as Error).message 
-      });
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          error: 'Build failed', 
+          message: (error as Error).message 
+        });
+      }
     }
   });
 
@@ -146,10 +190,16 @@ export async function startServer(port: number) {
 
   return new Promise<void>((resolve, reject) => {
     try {
-      app.listen(port, () => {
+      const server = app.listen(port, () => {
         console.log(`✅ Proxy server listening on port ${port}`);
         resolve();
       });
+      
+      // Configure server timeouts for large file transfers
+      server.timeout = 300000; // 5 minutes
+      server.headersTimeout = 300000; // 5 minutes
+      server.requestTimeout = 300000; // 5 minutes
+      
     } catch (error) {
       reject(error);
     }

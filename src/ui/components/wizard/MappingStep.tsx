@@ -26,6 +26,7 @@ export function MappingStep() {
       const tool = capabilities?.tools?.find((t: any) => t.name === toolName);
       newMappings[toolName] = {
         name: toolName,
+        toolId: toolName, // Default to original name
         selected: true,
         type: 'lm-tool',
         displayName: toolName,
@@ -63,6 +64,24 @@ export function MappingStep() {
       newMappings[toolName].description = description;
       setToolMappings(newMappings);
     }
+  };
+
+  // Handle tool ID change
+  const handleToolIdChange = (originalToolName: string, newToolId: string) => {
+    const newMappings = { ...toolMappings };
+    if (newMappings[originalToolName]) {
+      // Basic validation: ensure valid identifier format
+      const sanitizedToolId = newToolId.replace(/[^a-zA-Z0-9_]/g, '_');
+      newMappings[originalToolName].toolId = sanitizedToolId;
+      setToolMappings(newMappings);
+    }
+  };
+
+  // Check for duplicate tool IDs
+  const getDuplicateToolIds = () => {
+    const toolIds = Object.values(toolMappings).map(m => m.toolId);
+    const duplicates = toolIds.filter((id, index) => toolIds.indexOf(id) !== index);
+    return [...new Set(duplicates)];
   };
 
   // Handle prompt mapping toggle
@@ -196,6 +215,28 @@ export function MappingStep() {
                             </Label>
                           </div>
                         </RadioGroup>
+                      </div>
+
+                      {/* Tool ID */}
+                      <div className="space-y-2">
+                        <Label htmlFor={`${tool.name}-toolid`}>Tool ID</Label>
+                        <Input
+                          id={`${tool.name}-toolid`}
+                          value={mapping.toolId}
+                          onChange={(e) => handleToolIdChange(tool.name, e.target.value)}
+                          placeholder="e.g., read_file"
+                          className={`font-mono ${getDuplicateToolIds().includes(mapping.toolId) ? 'border-red-500' : ''}`}
+                        />
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">
+                            Identifier used in VS Code. Must be unique and contain only letters, numbers, and underscores.
+                          </p>
+                          {getDuplicateToolIds().includes(mapping.toolId) && (
+                            <p className="text-xs text-red-500">
+                              ⚠️ This tool ID is already used by another tool. Please choose a unique identifier.
+                            </p>
+                          )}
+                        </div>
                       </div>
 
                       {/* Display Name */}
