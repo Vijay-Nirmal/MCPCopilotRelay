@@ -62,6 +62,15 @@ export async function buildFromConfig(config: ExtensionConfig, outputDir: string
   const srcDir = path.join(extensionDir, 'src');
   const imagesDir = path.join(extensionDir, 'images');
 
+  // Clean up any existing build to prevent size growth
+  try {
+    const fs = await import('fs/promises');
+    await fs.rm(extensionDir, { recursive: true, force: true });
+    console.log('🧹 Cleaned up existing extension directory');
+  } catch (cleanupError) {
+    // Directory might not exist, which is fine
+  }
+
   // Create directories
   await mkdir(extensionDir, { recursive: true });
   await mkdir(srcDir, { recursive: true });

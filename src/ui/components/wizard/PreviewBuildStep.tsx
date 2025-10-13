@@ -71,13 +71,28 @@ export function PreviewBuildStep() {
     generatePreviews();
   });
 
-  const handleBuild = async () => {
+  const handleBuild = async (e?: React.MouseEvent) => {
+    // Prevent any default behavior and event bubbling
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    // Prevent double-click by checking if already building
+    if (isBuilding) {
+      console.log('⚠️ Build already in progress, ignoring click');
+      return;
+    }
+    
+    console.log('🎯 Build button clicked');
+    
     setIsBuilding(true);
     setBuildError(null);
     setBuildSuccess(false);
 
     try {
       console.log('🚀 Starting extension build process...');
+      
       // Prepare the full configuration
       const config = {
         mcpConfig,
@@ -88,50 +103,50 @@ export function PreviewBuildStep() {
         editedFiles, // Include any manually edited files
       };
 
-      // Call the build API with increased timeout
-      console.log('📦 Sending build request...');
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.log('⏰ Build request timed out after 5 minutes');
-        controller.abort();
-      }, 300000); // 5 minutes timeout
+      // Create a unique build ID to track this specific build
+      const buildId = Date.now().toString();
       
-      const response = await fetch('http://localhost:3000/api/build', {
+      // Step 1: Send build request (returns immediately with build status)
+      console.log('📦 Sending build request...');
+      const buildResponse = await fetch('http://localhost:3000/api/build', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(config),
-        signal: controller.signal,
+        body: JSON.stringify({ ...config, buildId }),
       });
-      
-      clearTimeout(timeoutId);
-      console.log('✅ Build request completed');
 
-      if (!response.ok) {
+      console.log('✅ Build request completed, status:', buildResponse.status);
+
+      if (!buildResponse.ok) {
         let errorMessage = 'Build failed';
         try {
-          const error = await response.json();
+          const error = await buildResponse.json();
           errorMessage = error.message || errorMessage;
         } catch {
-          errorMessage = `Build failed with status ${response.status}: ${response.statusText}`;
+          errorMessage = `Build failed with status ${buildResponse.status}: ${buildResponse.statusText}`;
         }
         throw new Error(errorMessage);
       }
 
-      // Check content type
-      const contentType = response.headers.get('Content-Type');
+      // Check content type to see if build succeeded
+      const contentType = buildResponse.headers.get('Content-Type');
+      
+      // If we got a JSON response, it's an error
       if (contentType && contentType.includes('application/json')) {
-        // Server returned JSON error instead of file
-        const error = await response.json();
+        const error = await buildResponse.json();
         throw new Error(error.message || 'Build failed');
       }
 
-      // Get the VSIX file as a blob with progress indication
-      console.log('📥 Converting response to blob...');
-      const blob = await response.blob();
+      // If we got here, the file download is ready
+      // Step 2: Trigger download using a hidden iframe (doesn't abort the connection)
+      console.log('📥 Initiating download...');
+      const filename = `${extensionInfo.name}-${extensionInfo.version}.vsix`;
+      
+      // Create a blob from the response and trigger download
+      const blob = await buildResponse.blob();
       const fileSizeMB = (blob.size / 1024 / 1024).toFixed(2);
-      console.log(`✅ Downloaded VSIX file: ${fileSizeMB} MB`);
+      console.log(`✅ Downloaded VSIX: ${fileSizeMB} MB`);
       
       if (blob.size === 0) {
         throw new Error('Received empty file from server');
@@ -139,43 +154,36 @@ export function PreviewBuildStep() {
       
       // Create download link
       const url = window.URL.createObjectURL(blob);
-      const filename = `${extensionInfo.name}-${extensionInfo.version}.vsix`;
       const a = document.createElement('a');
+      a.style.display = 'none';
       a.href = url;
       a.download = filename;
-      a.style.display = 'none'; // Hide the link
       document.body.appendChild(a);
       
       console.log(`💾 Triggering download: ${filename}`);
+      a.click();
       
-      // Try multiple methods to ensure download works across browsers
-      try {
-        a.click();
-      } catch (clickError) {
-        console.warn('Click method failed, trying alternative:', clickError);
-        // Fallback: create a MouseEvent
-        const event = new MouseEvent('click', {
-          view: window,
-          bubbles: true,
-          cancelable: true,
-        });
-        a.dispatchEvent(event);
-      }
-      
-      // Clean up
+      // Clean up after a delay
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
-        if (document.body.contains(a)) {
-          document.body.removeChild(a);
-        }
+        document.body.removeChild(a);
         console.log('🧹 Download cleanup completed');
       }, 1000);
 
       setBuildSuccess(true);
+      console.log('🎉 Build and download successful!');
+      
+      // DO NOT navigate away or reset - stay on this page
     } catch (error) {
-      setBuildError((error as Error).message);
+      console.error('🚨 Build error:', error);
+      if ((error as Error).name === 'AbortError') {
+        setBuildError('Build request timed out. Please try again.');
+      } else {
+        setBuildError((error as Error).message);
+      }
     } finally {
       setIsBuilding(false);
+      console.log('🏁 Build process finished');
     }
   };
 
@@ -358,6 +366,7 @@ export function PreviewBuildStep() {
 
           <div className="flex gap-4">
             <Button
+              type="button"
               onClick={handleBuild}
               disabled={!canBuild || isBuilding}
               className="flex-1"

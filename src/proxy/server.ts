@@ -97,6 +97,18 @@ export async function startServer(port: number) {
       // Prepare the output directory (use temp dir)
       const outputDir = path.join(process.cwd(), '.build');
       
+      // Clean up old build directory to prevent size growth
+      const fsPromises = await import('fs/promises');
+      const extensionBuildDir = path.join(outputDir, config.extension.name);
+      
+      try {
+        await fsPromises.rm(extensionBuildDir, { recursive: true, force: true });
+        console.log('🧹 Cleaned up old build directory');
+      } catch (cleanupError) {
+        // Ignore cleanup errors (directory might not exist)
+        console.log('ℹ️ No previous build to clean up');
+      }
+      
       console.log('Starting VSIX build...');
       const result = await buildFromConfig(config, outputDir, editedFiles);
       console.log(`VSIX built successfully: ${result.vsixPath}`);
@@ -106,22 +118,28 @@ export async function startServer(port: number) {
       const stats = await fs.stat(result.vsixPath);
       console.log(`VSIX file size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
       
-      // Read file into buffer for reliable blob handling
-      console.log('Reading VSIX file for download...');
-      const fileBuffer = await fs.readFile(result.vsixPath);
-      
-      // Set proper headers for file download
+      // Use res.download for reliable file downloads
       const filename = `${config.extension.name}-${config.extension.version}.vsix`;
+      console.log(`Sending VSIX file for download: ${filename} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`);
+      
+      // Set CORS headers before download
       res.set({
-        'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': fileBuffer.length.toString(),
-        'Cache-Control': 'no-cache',
-        'Access-Control-Expose-Headers': 'Content-Disposition'
+        'Access-Control-Expose-Headers': 'Content-Disposition, Content-Length',
+        'Cache-Control': 'no-cache'
       });
       
-      console.log(`Sending VSIX file: ${filename} (${(fileBuffer.length / 1024 / 1024).toFixed(2)} MB)`);
-      res.send(fileBuffer);
+      // Use Express res.download which handles large files properly
+      res.download(result.vsixPath, filename, (err) => {
+        if (err) {
+          console.error('Download error:', err);
+          // Don't send another response if headers already sent
+          if (!res.headersSent) {
+            res.status(500).json({ error: 'Download failed', message: err.message });
+          }
+        } else {
+          console.log(`✅ VSIX download completed: ${filename}`);
+        }
+      });
       
     } catch (error) {
       console.error('Build error:', error);
