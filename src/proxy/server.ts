@@ -106,36 +106,22 @@ export async function startServer(port: number) {
       const stats = await fs.stat(result.vsixPath);
       console.log(`VSIX file size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
       
+      // Read file into buffer for reliable blob handling
+      console.log('Reading VSIX file for download...');
+      const fileBuffer = await fs.readFile(result.vsixPath);
+      
       // Set proper headers for file download
       const filename = `${config.extension.name}-${config.extension.version}.vsix`;
       res.set({
         'Content-Type': 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': stats.size.toString(),
-        'Cache-Control': 'no-cache'
+        'Content-Length': fileBuffer.length.toString(),
+        'Cache-Control': 'no-cache',
+        'Access-Control-Expose-Headers': 'Content-Disposition'
       });
       
-      // Stream the file instead of using res.download for better control
-      const readStream = (await import('fs')).createReadStream(result.vsixPath);
-      
-      readStream.on('error', (err) => {
-        console.error('Error reading VSIX file:', err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Failed to read VSIX file', message: err.message });
-        }
-      });
-      
-      res.on('error', (err) => {
-        console.error('Error sending VSIX file:', err);
-        readStream.destroy();
-      });
-      
-      res.on('close', () => {
-        console.log('Client disconnected during VSIX transfer');
-        readStream.destroy();
-      });
-      
-      readStream.pipe(res);
+      console.log(`Sending VSIX file: ${filename} (${(fileBuffer.length / 1024 / 1024).toFixed(2)} MB)`);
+      res.send(fileBuffer);
       
     } catch (error) {
       console.error('Build error:', error);

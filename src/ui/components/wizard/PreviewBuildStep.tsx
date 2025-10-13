@@ -128,19 +128,48 @@ export function PreviewBuildStep() {
       }
 
       // Get the VSIX file as a blob with progress indication
-      console.log('Downloading VSIX file...');
+      console.log('📥 Converting response to blob...');
       const blob = await response.blob();
-      console.log(`Downloaded VSIX file: ${(blob.size / 1024 / 1024).toFixed(2)} MB`);
+      const fileSizeMB = (blob.size / 1024 / 1024).toFixed(2);
+      console.log(`✅ Downloaded VSIX file: ${fileSizeMB} MB`);
+      
+      if (blob.size === 0) {
+        throw new Error('Received empty file from server');
+      }
       
       // Create download link
       const url = window.URL.createObjectURL(blob);
+      const filename = `${extensionInfo.name}-${extensionInfo.version}.vsix`;
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${extensionInfo.name}-${extensionInfo.version}.vsix`;
+      a.download = filename;
+      a.style.display = 'none'; // Hide the link
       document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      
+      console.log(`💾 Triggering download: ${filename}`);
+      
+      // Try multiple methods to ensure download works across browsers
+      try {
+        a.click();
+      } catch (clickError) {
+        console.warn('Click method failed, trying alternative:', clickError);
+        // Fallback: create a MouseEvent
+        const event = new MouseEvent('click', {
+          view: window,
+          bubbles: true,
+          cancelable: true,
+        });
+        a.dispatchEvent(event);
+      }
+      
+      // Clean up
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        if (document.body.contains(a)) {
+          document.body.removeChild(a);
+        }
+        console.log('🧹 Download cleanup completed');
+      }, 1000);
 
       setBuildSuccess(true);
     } catch (error) {
@@ -299,7 +328,14 @@ export function PreviewBuildStep() {
             <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
               <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
               <AlertDescription className="text-green-600 dark:text-green-400">
-                Extension built successfully! The .vsix file has been downloaded.
+                <div className="space-y-1">
+                  <div>✅ Extension built successfully!</div>
+                  <div>📥 The .vsix file should download automatically.</div>
+                  <div className="text-sm">
+                    <strong>If download doesn't start:</strong> Check your Downloads folder or browser permissions. 
+                    You can also find the file manually in the <code className="bg-green-100 dark:bg-green-900 px-1 rounded">.build</code> folder.
+                  </div>
+                </div>
               </AlertDescription>
             </Alert>
           )}
@@ -342,7 +378,8 @@ export function PreviewBuildStep() {
           <div className="text-sm text-muted-foreground space-y-2">
             <p><strong>Next steps after building:</strong></p>
             <ol className="list-decimal list-inside space-y-1 ml-4">
-              <li>The .vsix file will be downloaded to your Downloads folder</li>
+              <li>The .vsix file will be downloaded automatically to your Downloads folder</li>
+              <li>If download is blocked, check your browser's download permissions</li>
               <li>Open VS Code and go to Extensions view (Ctrl+Shift+X)</li>
               <li>Click the "..." menu → "Install from VSIX..."</li>
               <li>Select the downloaded .vsix file</li>
