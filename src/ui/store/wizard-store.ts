@@ -109,6 +109,17 @@ interface WizardState {
     iconFileName?: string; // Original file name
     iconFileData?: string; // Base64-encoded icon data
     settings: ExtensionSetting[];
+    // Marketplace specific fields
+    categories?: string[]; // VS Code marketplace categories
+    keywords?: string[]; // Search keywords/tags
+    homepage?: string; // Homepage URL
+    bugs?: string; // Bug tracker URL
+    qna?: string | false; // Q&A URL or 'marketplace' or false
+    galleryBanner?: {
+      color: string;
+      theme: 'dark' | 'light';
+    };
+    private?: boolean; // Whether extension is private (default false for public)
   };
 
   // Current step
@@ -138,6 +149,13 @@ interface WizardState {
     iconFileName?: string;
     iconFileData?: string;
     settings: ExtensionSetting[];
+    categories?: string[];
+    keywords?: string[];
+    homepage?: string;
+    bugs?: string;
+    qna?: string | false;
+    galleryBanner?: { color: string; theme: 'dark' | 'light' };
+    private?: boolean;
   }) => void;
   addSetting: (setting: ExtensionSetting) => void;
   removeSetting: (key: string) => void;
@@ -176,6 +194,16 @@ const initialState = {
     iconFileName: undefined,
     iconFileData: undefined,
     settings: [],
+    categories: ['AI', 'Chat', 'Other'],
+    keywords: ['mcp', 'ai', 'copilot'],
+    homepage: '',
+    bugs: '',
+    qna: 'marketplace' as 'marketplace' | false,
+    galleryBanner: {
+      color: '#1e1e1e',
+      theme: 'dark' as 'dark' | 'light',
+    },
+    private: false,
   },
   extensionName: '',
   extensionDisplayName: '',

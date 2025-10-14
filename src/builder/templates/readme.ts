@@ -9,9 +9,32 @@ ${extension.description}
 
 ## Features
 
-This extension integrates with an MCP (Model Context Protocol) server to provide:
+This extension integrates with an MCP (Model Context Protocol) server to provide enhanced AI capabilities.
 
 ${generateFeaturesList(capabilities, mappings)}
+
+## Requirements
+
+- VS Code version 1.85.0 or higher
+- GitHub Copilot or compatible AI assistant (for Language Model Tools)
+- The MCP server must be running and accessible
+
+## Installation
+
+### From Marketplace
+
+1. Open VS Code
+2. Go to Extensions view (\`Ctrl+Shift+X\` / \`Cmd+Shift+X\`)
+3. Search for "${extension.displayName}"
+4. Click Install
+
+### From VSIX
+
+1. Download the \`.vsix\` file
+2. Open VS Code
+3. Go to Extensions view (\`Ctrl+Shift+X\` / \`Cmd+Shift+X\`)
+4. Click the "..." menu and select "Install from VSIX..."
+5. Select the downloaded \`.vsix\` file
 
 ## Configuration
 
@@ -21,61 +44,41 @@ ${generateSettingsDoc(settings, extension.name)}
 
 ${generateUsageDoc(capabilities, mappings)}
 
-## MCP Server
+## MCP Server Connection
 
 This extension connects to an MCP server using the following configuration:
 
-- **Transport**: ${config.mcp.type}
+- **Transport Type**: ${config.mcp.type}
 ${generateMcpConfigDoc(config.mcp)}
 
-## Requirements
+${extension.repository ? `## Contributing
 
-- VS Code version 1.85.0 or higher
-- The MCP server must be running and accessible
+Contributions are welcome! Please visit [${extension.repository}](${extension.repository}) for guidelines.
 
-## Installation
+` : ''}${extension.bugs ? `## Support
 
-1. Download the \`.vsix\` file
-2. Open VS Code
-3. Go to Extensions view (Ctrl+Shift+X)
-4. Click the "..." menu and select "Install from VSIX..."
-5. Select the downloaded \`.vsix\` file
+Found a bug or have a feature request? Please file an issue at: ${extension.bugs}
 
-## Development
-
-This extension was generated using [MCP Copilot Relay](https://github.com/vijay-nirmal/mcp-copilot-relay).
-
-### Building from Source
-
-\`\`\`bash
-npm install
-npm run compile
-\`\`\`
-
-### Testing
-
-\`\`\`bash
-npm run watch
-# Press F5 in VS Code to launch Extension Development Host
-\`\`\`
-
-## Contributing
-
-${extension.repository ? `Please see [${extension.repository}](${extension.repository}) for contribution guidelines.` : 'Contributions are welcome!'}
-
-## License
+` : ''}## License
 
 ${extension.license || 'See LICENSE file'}
 
 ## Release Notes
 
-### ${extension.version}
+### ${extension.version} (Initial Release)
 
 Initial release generated from MCP server capabilities.
 
+**Features:**
+${Object.values(mappings.tools).map((m: any) => `- ${m.displayName}`).join('\n')}
+
 ---
 
-**Enjoy!**
+## About This Extension
+
+This extension was generated using [MCP Copilot Relay](https://github.com/vijay-nirmal/mcp-copilot-relay), a tool for creating VS Code extensions from Model Context Protocol servers.
+
+**Enjoy!** 🚀
 `;
 }
 

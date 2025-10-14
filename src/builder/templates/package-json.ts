@@ -10,7 +10,8 @@ export function generatePackageJson(config: ExtensionConfig) {
     engines: {
       vscode: '^1.85.0',
     },
-    categories: ['AI', 'Chat', 'Other'],
+    categories: config.extension.categories || ['AI', 'Chat', 'Other'],
+    keywords: config.extension.keywords || ['mcp', 'ai'],
     activationEvents: [],
     main: './out/extension.js',
     contributes: {
@@ -34,15 +35,64 @@ export function generatePackageJson(config: ExtensionConfig) {
     },
   };
 
-  // Add author, license, repository, icon if provided
+  // Add author, license, repository if provided
   if (config.extension.author) packageJson.author = config.extension.author;
   if (config.extension.license) packageJson.license = config.extension.license;
-  if (config.extension.repository) packageJson.repository = config.extension.repository;
   
-  // Icon path (relative to extension root, e.g., 'images/icon.png')
+  // Repository configuration
+  if (config.extension.repository) {
+    if (config.extension.repository.startsWith('http')) {
+      // Full URL format
+      packageJson.repository = {
+        type: 'git',
+        url: config.extension.repository,
+      };
+    } else {
+      // Simple string format
+      packageJson.repository = config.extension.repository;
+    }
+  }
+  
+  // Homepage - defaults to repository if not specified
+  if (config.extension.homepage) {
+    packageJson.homepage = config.extension.homepage;
+  } else if (config.extension.repository) {
+    packageJson.homepage = config.extension.repository;
+  }
+  
+  // Bugs/issues URL - defaults to repository issues if not specified
+  if (config.extension.bugs) {
+    packageJson.bugs = {
+      url: config.extension.bugs,
+    };
+  } else if (config.extension.repository && config.extension.repository.includes('github.com')) {
+    // Auto-generate GitHub issues URL
+    const repoUrl = config.extension.repository.replace(/\.git$/, '');
+    packageJson.bugs = {
+      url: `${repoUrl}/issues`,
+    };
+  }
+  
+  // Q&A configuration
+  if (config.extension.qna !== undefined) {
+    packageJson.qna = config.extension.qna;
+  }
+  
+  // Private flag - if true, extension won't be public in marketplace
+  if (config.extension.private !== undefined) {
+    packageJson.private = config.extension.private;
+  }
+  
+  // Icon path (relative to extension root)
   if (config.extension.iconFileName) {
     packageJson.icon = `images/${config.extension.iconFileName}`;
-    // Add gallery banner for better Marketplace appearance
+  }
+  
+  // Gallery banner for Marketplace appearance
+  if (config.extension.galleryBanner) {
+    packageJson.galleryBanner = config.extension.galleryBanner;
+  } else if (config.extension.iconFileName) {
+    // Default banner if icon exists
     packageJson.galleryBanner = {
       color: '#1e1e1e',
       theme: 'dark',

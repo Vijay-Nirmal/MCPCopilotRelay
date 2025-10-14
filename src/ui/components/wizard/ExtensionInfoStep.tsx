@@ -479,6 +479,185 @@ export function ExtensionInfoStep() {
         </CardContent>
       </Card>
 
+      {/* Marketplace Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Marketplace Configuration</CardTitle>
+          <CardDescription>
+            Configure how your extension appears in the VS Code Marketplace
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Public/Private Toggle */}
+          <div className="flex items-center space-x-2 p-4 border rounded-lg bg-muted/50">
+            <Checkbox
+              id="public-extension"
+              checked={!extensionInfo.private}
+              onCheckedChange={(checked) => {
+                setExtensionInfo({
+                  ...extensionInfo,
+                  private: !checked,
+                });
+              }}
+            />
+            <div className="flex-1">
+              <Label htmlFor="public-extension" className="text-sm font-medium cursor-pointer">
+                Make this extension public
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                {extensionInfo.private 
+                  ? '⚠️ Extension is PRIVATE and will not be visible in the marketplace' 
+                  : '✅ Extension is PUBLIC and will be visible to everyone in the marketplace'}
+              </p>
+            </div>
+          </div>
+
+          {/* Categories */}
+          <div className="space-y-2">
+            <Label htmlFor="categories">Categories</Label>
+            <Input
+              id="categories"
+              value={extensionInfo.categories?.join(', ') || ''}
+              onChange={(e) => {
+                const categories = e.target.value.split(',').map(c => c.trim()).filter(c => c);
+                setExtensionInfo({
+                  ...extensionInfo,
+                  categories,
+                });
+              }}
+              placeholder="AI, Chat, Other"
+            />
+            <p className="text-xs text-muted-foreground">
+              Comma-separated categories. Common: AI, Chat, Data Science, Language Packs, Machine Learning, Other, Programming Languages, Snippets, Testing, Themes
+            </p>
+          </div>
+
+          {/* Keywords/Tags */}
+          <div className="space-y-2">
+            <Label htmlFor="keywords">Keywords / Tags</Label>
+            <Input
+              id="keywords"
+              value={extensionInfo.keywords?.join(', ') || ''}
+              onChange={(e) => {
+                const keywords = e.target.value.split(',').map(k => k.trim()).filter(k => k);
+                setExtensionInfo({
+                  ...extensionInfo,
+                  keywords,
+                });
+              }}
+              placeholder="mcp, ai, copilot"
+            />
+            <p className="text-xs text-muted-foreground">
+              Comma-separated keywords for search. Helps users discover your extension.
+            </p>
+          </div>
+
+          {/* Homepage */}
+          <div className="space-y-2">
+            <Label htmlFor="homepage">Homepage URL</Label>
+            <Input
+              id="homepage"
+              value={extensionInfo.homepage || ''}
+              onChange={(e) => handleFieldChange('homepage', e.target.value)}
+              placeholder="https://your-extension-homepage.com"
+            />
+            <p className="text-xs text-muted-foreground">
+              Optional. Will default to repository URL if not specified.
+            </p>
+          </div>
+
+          {/* Bugs/Issues URL */}
+          <div className="space-y-2">
+            <Label htmlFor="bugs">Bug Tracker URL</Label>
+            <Input
+              id="bugs"
+              value={extensionInfo.bugs || ''}
+              onChange={(e) => handleFieldChange('bugs', e.target.value)}
+              placeholder="https://github.com/user/repo/issues"
+            />
+            <p className="text-xs text-muted-foreground">
+              Optional. Will default to repository/issues for GitHub repos.
+            </p>
+          </div>
+
+          {/* Gallery Banner */}
+          <div className="space-y-4 p-4 border rounded-lg">
+            <Label>Marketplace Banner</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="banner-color">Banner Color</Label>
+                <Input
+                  id="banner-color"
+                  type="color"
+                  value={extensionInfo.galleryBanner?.color || '#1e1e1e'}
+                  onChange={(e) => {
+                    setExtensionInfo({
+                      ...extensionInfo,
+                      galleryBanner: {
+                        color: e.target.value,
+                        theme: extensionInfo.galleryBanner?.theme || 'dark',
+                      },
+                    });
+                  }}
+                  className="h-10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="banner-theme">Banner Theme</Label>
+                <Select
+                  value={extensionInfo.galleryBanner?.theme || 'dark'}
+                  onValueChange={(value: 'dark' | 'light') => {
+                    setExtensionInfo({
+                      ...extensionInfo,
+                      galleryBanner: {
+                        color: extensionInfo.galleryBanner?.color || '#1e1e1e',
+                        theme: value,
+                      },
+                    });
+                  }}
+                >
+                  <SelectTrigger id="banner-theme">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dark">Dark</SelectItem>
+                    <SelectItem value="light">Light</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Banner color and theme for the marketplace listing page.
+            </p>
+          </div>
+
+          {/* Q&A Configuration */}
+          <div className="space-y-2">
+            <Label htmlFor="qna">Q&A / Support</Label>
+            <Select
+              value={extensionInfo.qna === false ? 'false' : extensionInfo.qna || 'marketplace'}
+              onValueChange={(value) => {
+                setExtensionInfo({
+                  ...extensionInfo,
+                  qna: value === 'false' ? false : value === 'marketplace' ? 'marketplace' : value,
+                });
+              }}
+            >
+              <SelectTrigger id="qna">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="marketplace">Use Marketplace Q&A</SelectItem>
+                <SelectItem value="false">Disable Q&A</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Choose how users can ask questions about your extension.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Validation Alert */}
       {(!extensionInfo.name || !extensionInfo.displayName || !extensionInfo.description || 
         !extensionInfo.version || !extensionInfo.publisher) && (

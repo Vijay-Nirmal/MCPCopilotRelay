@@ -43,6 +43,14 @@ function transformUIConfig(uiConfig: any): ExtensionConfig {
       icon: uiConfig.extensionInfo?.icon,
       iconFileName: uiConfig.extensionInfo?.iconFileName,
       iconFileData: uiConfig.extensionInfo?.iconFileData,
+      // Marketplace fields
+      categories: uiConfig.extensionInfo?.categories,
+      keywords: uiConfig.extensionInfo?.keywords,
+      homepage: uiConfig.extensionInfo?.homepage,
+      bugs: uiConfig.extensionInfo?.bugs,
+      qna: uiConfig.extensionInfo?.qna,
+      galleryBanner: uiConfig.extensionInfo?.galleryBanner,
+      private: uiConfig.extensionInfo?.private,
     },
   };
 }

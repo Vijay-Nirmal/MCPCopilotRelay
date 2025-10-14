@@ -71,7 +71,7 @@ export function MappingStep() {
     const newMappings = { ...toolMappings };
     if (newMappings[originalToolName]) {
       // Basic validation: ensure valid identifier format
-      const sanitizedToolId = newToolId.replace(/[^a-zA-Z0-9_]/g, '_');
+      const sanitizedToolId = newToolId.replace(/[^a-zA-Z0-9_-]/g, '_');
       newMappings[originalToolName].toolId = sanitizedToolId;
       setToolMappings(newMappings);
     }
@@ -229,7 +229,7 @@ export function MappingStep() {
                         />
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">
-                            Identifier used in VS Code. Must be unique and contain only letters, numbers, and underscores.
+                            Identifier used in VS Code. Must be unique and contain only letters, numbers, hyphens, and underscores.
                           </p>
                           {getDuplicateToolIds().includes(mapping.toolId) && (
                             <p className="text-xs text-red-500">

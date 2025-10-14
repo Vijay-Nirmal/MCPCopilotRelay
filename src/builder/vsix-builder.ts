@@ -54,6 +54,17 @@ export interface ExtensionConfig {
     icon?: string;
     iconFileName?: string;
     iconFileData?: string; // Base64-encoded icon data
+    // Marketplace fields
+    categories?: string[];
+    keywords?: string[];
+    homepage?: string;
+    bugs?: string;
+    qna?: string | false;
+    galleryBanner?: {
+      color: string;
+      theme: 'dark' | 'light';
+    };
+    private?: boolean;
   };
 }
 
@@ -106,6 +117,12 @@ export async function buildFromConfig(config: ExtensionConfig, outputDir: string
     const iconBuffer = Buffer.from(base64Data, 'base64');
     const iconPath = path.join(imagesDir, config.extension.iconFileName);
     await writeFile(iconPath, iconBuffer);
+  }
+
+  // Create LICENSE file if license is specified
+  if (config.extension.license && config.extension.license !== 'SEE LICENSE IN README.md') {
+    const licenseContent = generateLicenseFile(config.extension.license, config.extension.author);
+    await writeFile(path.join(extensionDir, 'LICENSE'), licenseContent);
   }
 
   // Create .vscode-test.mjs for testing
@@ -309,9 +326,14 @@ async function packageExtension(extensionDir: string, config: ExtensionConfig): 
   <Default Extension="json" ContentType="application/json" />
   <Default Extension="js" ContentType="application/javascript" />
   <Default Extension="md" ContentType="text/markdown" />
+  <Default Extension="txt" ContentType="text/plain" />
   <Default Extension="png" ContentType="image/png" />
   <Default Extension="jpg" ContentType="image/jpeg" />
+  <Default Extension="jpeg" ContentType="image/jpeg" />
+  <Default Extension="gif" ContentType="image/gif" />
+  <Default Extension="svg" ContentType="image/svg+xml" />
   <Default Extension="vsixmanifest" ContentType="text/xml" />
+  <Default Extension="xml" ContentType="text/xml" />
 </Types>`;
   zip.file('[Content_Types].xml', contentTypes);
 
@@ -332,22 +354,178 @@ async function packageExtension(extensionDir: string, config: ExtensionConfig): 
 }
 
 function generateVsixManifest(config: ExtensionConfig): string {
+  // Generate tags from keywords
+  const tags = config.extension.keywords?.join(',') || 'mcp,model-context-protocol';
+  
+  // Generate categories
+  const categories = config.extension.categories?.join(',') || 'Other';
+  
+  let properties = "";
+
+  // Add repository links as properties
+  if (config.extension.repository) {
+    const repoUrl = escapeXml(config.extension.repository);
+    properties += `
+                <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="${repoUrl}" />
+                <Property Id="Microsoft.VisualStudio.Services.Links.Getstarted" Value="${repoUrl}" />
+                <Property Id="Microsoft.VisualStudio.Services.Links.GitHub" Value="${repoUrl}" />`;
+    
+    // Add bugs/issues URL
+    if (config.extension.bugs) {
+      properties += `
+                <Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="${escapeXml(config.extension.bugs)}" />`;
+    } else if (repoUrl.includes('github.com')) {
+      const issuesUrl = repoUrl.replace(/\.git$/, '') + '/issues';
+      properties += `
+                <Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="${issuesUrl}" />`;
+    }
+    
+    // Add README/Learn link
+    const readmeUrl = repoUrl.replace(/\.git$/, '') + '#readme';
+    properties += `
+                <Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="${readmeUrl}" />`;
+  } else if (config.extension.homepage) {
+    properties += `
+                <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="${escapeXml(config.extension.homepage)}" />`;
+  }
+
+  // Add GitHub Flavored Markdown and Pricing properties
+  properties += `
+                
+                <Property Id="Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown" Value="true" />
+                <Property Id="Microsoft.VisualStudio.Services.Content.Pricing" Value="Free"/>`;
+
+  // Build metadata section
+  let metadata = `        <Identity Language="en-US" Id="${escapeXml(config.extension.name)}" Version="${config.extension.version}" Publisher="${escapeXml(config.extension.publisher)}" />
+        <DisplayName>${escapeXml(config.extension.displayName)}</DisplayName>
+        <Description xml:space="preserve">${escapeXml(config.extension.description)}</Description>
+        <Tags>${escapeXml(tags)}</Tags>
+        <Categories>${escapeXml(categories)}</Categories>`;
+
+  // Add GalleryFlags for public/private
+  if (!config.extension.private) {
+    metadata += `\n        <GalleryFlags>Public</GalleryFlags>`;
+  }
+
+  // Add Properties section
+  metadata += `
+        
+        <Properties>
+${properties}
+                
+                
+            </Properties>`;
+
+  // Build assets section
+  let assets = `        <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
+        <Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/README.md" Addressable="true" />`;
+
+  // Add Icon asset
+  if (config.extension.iconFileName) {
+    assets += `\n        <Asset Type="Microsoft.VisualStudio.Services.Icons.Default" Path="extension/images/${config.extension.iconFileName}" Addressable="true" />`;
+  }
+
   return `<?xml version="1.0" encoding="utf-8"?>
-<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
-  <Metadata>
-    <Identity Language="en-US" Id="${config.extension.name}" Version="${config.extension.version}" Publisher="${config.extension.publisher}" />
-    <DisplayName>${config.extension.displayName}</DisplayName>
-    <Description xml:space="preserve">${config.extension.description}</Description>
-    <Tags>mcp,model-context-protocol</Tags>
-    <Categories>Other</Categories>
-    <License>extension/README.md</License>
-  </Metadata>
-  <Installation>
-    <InstallationTarget Id="Microsoft.VisualStudio.Code" />
-  </Installation>
-  <Dependencies />
-  <Assets>
-    <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
-  </Assets>
-</PackageManifest>`;
+    <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+        <Metadata>
+${metadata}
+        </Metadata>
+        <Installation>
+            <InstallationTarget Id="Microsoft.VisualStudio.Code"/>
+        </Installation>
+        <Dependencies/>
+        <Assets>
+${assets}
+        </Assets>
+    </PackageManifest>`;
+}
+
+// Helper function to escape XML special characters
+function escapeXml(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+// Helper function to generate LICENSE file content
+function generateLicenseFile(licenseType: string, author?: string): string {
+  const year = new Date().getFullYear();
+  const copyrightHolder = author || 'The Extension Author';
+
+  switch (licenseType.toUpperCase()) {
+    case 'MIT':
+      return `MIT License
+
+Copyright (c) ${year} ${copyrightHolder}
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.`;
+
+    case 'APACHE-2.0':
+    case 'APACHE':
+      return `Apache License
+Version 2.0, January 2004
+http://www.apache.org/licenses/
+
+Copyright ${year} ${copyrightHolder}
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.`;
+
+    case 'GPL-3.0':
+    case 'GPL':
+      return `GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
+
+Copyright (C) ${year} ${copyrightHolder}
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.`;
+
+    default:
+      // Generic license template
+      return `${licenseType} License
+
+Copyright (c) ${year} ${copyrightHolder}
+
+All rights reserved.`;
+  }
 }
