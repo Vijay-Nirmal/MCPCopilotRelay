@@ -264,6 +264,7 @@ export function ExtensionInfoStep() {
                 <li>• <strong>Env Variable:</strong> Database connection string (<code>DATABASE_URL</code> env)</li>
                 <li>• <strong>Command Arg:</strong> Server path (<code>--config</code> argument)</li>
                 <li>• <strong>URL Param:</strong> Query parameter for HTTP transport (<code>api_key</code> in URL)</li>
+                <li>• <strong>Dynamic Argument:</strong> User provides full argument string in setting value (e.g., <code>--port 3000 --verbose</code>), appended at end</li>
               </ul>
             </AlertDescription>
           </Alert>
@@ -311,10 +312,21 @@ export function ExtensionInfoStep() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor={`setting-type-${index}`}>Type</Label>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`setting-type-${index}`}>Type</Label>
+                          {setting.mcpMapping?.target === 'dynamic-arg' && (
+                            <span 
+                              className="cursor-help" 
+                              title="Type is locked to 'string' for dynamic arguments"
+                            >
+                              <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                            </span>
+                          )}
+                        </div>
                         <Select
                           value={setting.type}
                           onValueChange={(value) => handleSettingChange(index, 'type', value)}
+                          disabled={setting.mcpMapping?.target === 'dynamic-arg'}
                         >
                           <SelectTrigger id={`setting-type-${index}`}>
                             <SelectValue />
@@ -349,8 +361,17 @@ export function ExtensionInfoStep() {
                         id={`setting-default-${index}`}
                         value={setting.default}
                         onChange={(e) => handleSettingChange(index, 'default', e.target.value)}
-                        placeholder="(optional)"
+                        placeholder={
+                          setting.mcpMapping?.target === 'dynamic-arg' 
+                            ? 'e.g., --port 3000 or --verbose'
+                            : '(optional)'
+                        }
                       />
+                      {setting.mcpMapping?.target === 'dynamic-arg' && (
+                        <p className="text-xs text-muted-foreground">
+                          Provide the complete argument string (flag and value if needed)
+                        </p>
+                      )}
                     </div>
 
                     {/* MCP Mapping Section */}
@@ -370,6 +391,8 @@ export function ExtensionInfoStep() {
                               if (currentSetting) {
                                 newSettings[index] = {
                                   ...currentSetting,
+                                  // Force type to 'string' when selecting dynamic-arg
+                                  type: value === 'dynamic-arg' ? 'string' : currentSetting.type,
                                   mcpMapping: {
                                     ...(currentSetting.mcpMapping || { target: 'header', key: '', required: false }),
                                     target: value as any,
@@ -387,46 +410,59 @@ export function ExtensionInfoStep() {
                               <SelectItem value="env">Environment Variable</SelectItem>
                               <SelectItem value="arg">Command Argument</SelectItem>
                               <SelectItem value="url-param">URL Parameter</SelectItem>
+                              <SelectItem value="dynamic-arg">Dynamic Argument (stdio only)</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor={`setting-mcp-key-${index}`}>
-                            Parameter Name <span className="text-destructive">*</span>
-                          </Label>
-                          <Input
-                            id={`setting-mcp-key-${index}`}
-                            value={setting.mcpMapping?.key || ''}
-                            onChange={(e) => {
-                              const newSettings = [...extensionInfo.settings];
-                              const currentSetting = newSettings[index];
-                              if (currentSetting) {
-                                newSettings[index] = {
-                                  ...currentSetting,
-                                  mcpMapping: {
-                                    ...(currentSetting.mcpMapping || { target: 'header', key: '', required: false }),
-                                    key: e.target.value,
-                                  },
-                                } as any;
-                                setExtensionInfo({ ...extensionInfo, settings: newSettings });
+                        {setting.mcpMapping?.target !== 'dynamic-arg' && (
+                          <div className="space-y-2">
+                            <Label htmlFor={`setting-mcp-key-${index}`}>
+                              Parameter Name <span className="text-destructive">*</span>
+                            </Label>
+                            <Input
+                              id={`setting-mcp-key-${index}`}
+                              value={setting.mcpMapping?.key || ''}
+                              onChange={(e) => {
+                                const newSettings = [...extensionInfo.settings];
+                                const currentSetting = newSettings[index];
+                                if (currentSetting) {
+                                  newSettings[index] = {
+                                    ...currentSetting,
+                                    mcpMapping: {
+                                      ...(currentSetting.mcpMapping || { target: 'header', key: '', required: false }),
+                                      key: e.target.value,
+                                    },
+                                  } as any;
+                                  setExtensionInfo({ ...extensionInfo, settings: newSettings });
+                                }
+                              }}
+                              placeholder={
+                                setting.mcpMapping?.target === 'header' ? 'Authorization' :
+                                setting.mcpMapping?.target === 'env' ? 'API_KEY' :
+                                setting.mcpMapping?.target === 'arg' ? '--api-key' :
+                                'api_key'
                               }
-                            }}
-                            placeholder={
-                              setting.mcpMapping?.target === 'header' ? 'Authorization' :
-                              setting.mcpMapping?.target === 'env' ? 'API_KEY' :
-                              setting.mcpMapping?.target === 'arg' ? '--api-key' :
-                              'api_key'
-                            }
-                            className="font-mono"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            {setting.mcpMapping?.target === 'header' && 'HTTP header name (e.g., CONTEXT7_API_KEY)'}
-                            {setting.mcpMapping?.target === 'env' && 'Environment variable name (e.g., DATABASE_URL)'}
-                            {setting.mcpMapping?.target === 'arg' && 'Command line flag (e.g., --config)'}
-                            {setting.mcpMapping?.target === 'url-param' && 'URL query parameter (e.g., api_key)'}
-                          </p>
-                        </div>
+                              className="font-mono"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              {setting.mcpMapping?.target === 'header' && 'HTTP header name (e.g., CONTEXT7_API_KEY)'}
+                              {setting.mcpMapping?.target === 'env' && 'Environment variable name (e.g., DATABASE_URL)'}
+                              {setting.mcpMapping?.target === 'arg' && 'Command line flag (e.g., --config)'}
+                              {setting.mcpMapping?.target === 'url-param' && 'URL query parameter (e.g., api_key)'}
+                            </p>
+                          </div>
+                        )}
+                        {setting.mcpMapping?.target === 'dynamic-arg' && (
+                          <div className="col-span-2">
+                            <Alert>
+                              <Info className="h-4 w-4" />
+                              <AlertDescription>
+                                <strong>Dynamic Arguments:</strong> The user will provide the complete argument string in the setting value (e.g., <code>--port 3000</code> or <code>--verbose</code>). This will be appended at the end of the command when starting the MCP server.
+                              </AlertDescription>
+                            </Alert>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center space-x-2">

@@ -7,17 +7,13 @@ export function generateReadme(config: ExtensionConfig): string {
 
 ${extension.description}
 
+${generateManualToolSetInstructions(mappings)}
+
 ## Features
 
 This extension integrates with an MCP (Model Context Protocol) server to provide enhanced AI capabilities.
 
 ${generateFeaturesList(capabilities, mappings)}
-
-## Requirements
-
-- VS Code version 1.85.0 or higher
-- GitHub Copilot or compatible AI assistant (for Language Model Tools)
-- The MCP server must be running and accessible
 
 ## Installation
 
@@ -36,13 +32,7 @@ ${generateFeaturesList(capabilities, mappings)}
 4. Click the "..." menu and select "Install from VSIX..."
 5. Select the downloaded \`.vsix\` file
 
-## Configuration
-
-${generateSettingsDoc(settings, extension.name)}
-
-## Usage
-
-${generateUsageDoc(capabilities, mappings)}
+${generateConfigurationSection(settings, extension.name)}
 
 ## MCP Server Connection
 
@@ -63,22 +53,68 @@ Found a bug or have a feature request? Please file an issue at: ${extension.bugs
 
 ${extension.license || 'See LICENSE file'}
 
-## Release Notes
-
-### ${extension.version} (Initial Release)
-
-Initial release generated from MCP server capabilities.
-
-**Features:**
-${Object.values(mappings.tools).map((m: any) => `- ${m.displayName}`).join('\n')}
-
----
-
 ## About This Extension
 
 This extension was generated using [MCP Copilot Relay](https://github.com/vijay-nirmal/mcp-copilot-relay), a tool for creating VS Code extensions from Model Context Protocol servers.
 
 **Enjoy!** 🚀
+`;
+}
+
+function generateManualToolSetInstructions(mappings: any): string {
+  // Only show manual instructions if toolsets are not enabled but configuration exists
+  if (mappings.enableToolSets) {
+    return ''; // Feature is enabled, toolset will be created automatically
+  }
+
+  const lmTools = Object.entries(mappings.tools).filter(([, m]: any) => m.type === 'lm-tool');
+  if (lmTools.length === 0) {
+    return ''; // No language model tools to group
+  }
+
+  // Get tool IDs for the JSON configuration
+  const toolIds = lmTools.map(([, mapping]: any) => {
+    const m: any = mapping;
+    return m.toolId || m.name;
+  });
+
+  // Use configured toolset name or default
+  const toolSetName = mappings.toolSetName && mappings.toolSetName.trim() !== '' 
+    ? mappings.toolSetName 
+    : 'mcp-tools';
+  
+  const toolSetDescription = mappings.toolSetDescription && mappings.toolSetDescription.trim() !== ''
+    ? mappings.toolSetDescription
+    : 'MCP server tools';
+
+  const toolSetJson = JSON.stringify({
+    [toolSetName]: {
+      tools: toolIds,
+      description: toolSetDescription,
+      icon: "tools"
+    }
+  }, null, 4);
+
+  return `## ⚠️ **IMPORTANT: Manual Tool Set Configuration Required**
+
+This extension's tools need to be manually configured as a tool set in VS Code. Follow these steps to enable all tools at once:
+
+### Steps to Configure Tool Set:
+
+1. Press \`Ctrl+Shift+P\` (or \`Cmd+Shift+P\` on Mac)
+2. Search for and select: **\`Chat: Configure Tool Sets...\`**
+3. Select an existing tool set file or create a new file (e.g., \`user-toolsets.json\`)
+4. Add the following JSON configuration to the file:
+
+\`\`\`json
+${toolSetJson}
+\`\`\`
+
+5. Save the file
+6. The tool set will now be available in GitHub Copilot, you can invoke it using '#${toolSetName}'
+
+**Why is this needed?** VS Code doesn't currently support including toolSets in extensions (planned for future releases). This manual step groups all tools under a single name (\`#${toolSetName}\`) for easier management and invocation similar to MCP Server.
+
 `;
 }
 
@@ -108,65 +144,54 @@ function generateFeaturesList(capabilities: any, mappings: any): string {
   return features.length > 0 ? features.join('\n') : '- No features configured';
 }
 
-function generateSettingsDoc(settings: Record<string, any>, extensionName: string): string {
+function generateConfigurationSection(settings: Record<string, any>, extensionName: string): string {
+  // Only show configuration section if there are actual settings
   if (Object.keys(settings).length === 0) {
-    return 'This extension does not require any configuration.';
+    return '';
   }
 
-  const settingsDoc = Object.entries(settings)
+  let settingsDoc = '';
+  
+  // Always document the autoConnect setting first
+  settingsDoc += `- \`${extensionName}.autoConnect\`: Automatically connect to MCP server when VS Code starts. If disabled (default), the server will connect on first tool use. (Default: \`false\`)\n`;
+
+  settingsDoc += Object.entries(settings)
     .map(([key, setting]) => {
-      return `- \`${extensionName}.${key}\`: ${setting.description}${setting.default ? ` (Default: \`${setting.default}\`)` : ''}`;
+      let description = `- \`${extensionName}.${key}\`: ${setting.description}${setting.default ? ` (Default: \`${setting.default}\`)` : ''}`;
+      
+      // Add mapping information for user awareness
+      if (setting.mcpMapping) {
+        const target = setting.mcpMapping.target;
+        if (target === 'dynamic-arg') {
+          description += `\n  - **Type**: Dynamic Argument - This value will be appended to the MCP server command at runtime`;
+        } else if (target === 'arg') {
+          description += `\n  - **Type**: Command Argument - This value is embedded in the command`;
+        } else if (target === 'env') {
+          description += `\n  - **Type**: Environment Variable - Set as \`${setting.mcpMapping.key}\``;
+        } else if (target === 'header') {
+          description += `\n  - **Type**: HTTP Header - Set as \`${setting.mcpMapping.key}\``;
+        } else if (target === 'url-param') {
+          description += `\n  - **Type**: URL Parameter - Set as \`${setting.mcpMapping.key}\``;
+        }
+        
+        if (setting.mcpMapping.required) {
+          description += ' **(Required)**';
+        }
+      }
+      
+      return description;
     })
     .join('\n');
 
-  return `Configure the extension using these settings:\n\n${settingsDoc}`;
-}
-
-function generateUsageDoc(_capabilities: any, mappings: any): string {
-  const usage: string[] = [];
-
-  // Chat participants
-  const chatParticipants = Object.entries(mappings.prompts).filter(
-    ([, m]: any) => m.type === 'chat-participant'
-  );
-  if (chatParticipants.length > 0) {
-    usage.push('### Chat Participants\n');
-    chatParticipants.forEach(([name, mapping]: any) => {
-      usage.push(`#### @${name}`);
-      usage.push(`${mapping.description}\n`);
-      if (mapping.slashCommand) {
-        usage.push(`Use \`/${mapping.slashCommand}\` for specific actions.\n`);
-      }
-    });
-  }
-
-  // Language Model Tools
-  const lmTools = Object.entries(mappings.tools).filter(([, m]: any) => m.type === 'lm-tool');
-  if (lmTools.length > 0) {
-    usage.push('### Language Model Tools\n');
-    usage.push('These tools are automatically available to GitHub Copilot and other AI assistants:\n');
-    lmTools.forEach(([_name, mapping]: any) => {
-      usage.push(`- **${mapping.displayName}**: ${mapping.description}`);
-    });
-  }
-
-  // Commands
-  const commands = Object.entries(mappings.tools).filter(([, m]: any) => m.type === 'command');
-  if (commands.length > 0) {
-    usage.push('\n### Commands\n');
-    usage.push('Access these commands via the Command Palette (Ctrl+Shift+P):\n');
-    commands.forEach(([, mapping]: any) => {
-      usage.push(`- **${mapping.displayName}**: ${mapping.description}`);
-    });
-  }
-
-  return usage.length > 0 ? usage.join('\n') : 'Use the features listed above.';
+  return `## Configuration\n\nConfigure the extension using these settings:\n\n${settingsDoc}\n`;
 }
 
 function generateMcpConfigDoc(mcpConfig: any): string {
   if (mcpConfig.type === 'stdio') {
     return `- **Command**: \`${mcpConfig.config.command}\`
-- **Arguments**: \`${JSON.stringify(mcpConfig.config.args || [])}\``;
+- **Arguments**: \`${JSON.stringify(mcpConfig.config.args || [])}\`
+
+**Note**: If you have configured settings with "Dynamic Argument" mapping, those arguments will be automatically appended to the command at runtime based on your VS Code settings. This allows you to customize the MCP server behavior without rebuilding the extension.`;
   } else {
     return `- **URL**: \`${mcpConfig.config.url}\``;
   }

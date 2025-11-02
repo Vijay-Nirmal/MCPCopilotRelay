@@ -30,13 +30,16 @@ export interface ExtensionConfig {
   mappings: {
     tools: Record<string, { type: 'lm-tool' | 'command'; toolId?: string; displayName: string; description: string }>;
     prompts: Record<string, { type: 'chat-participant'; displayName: string; description: string; slashCommand?: string }>;
+    toolSetName?: string;
+    toolSetDescription?: string;
+    enableToolSets?: boolean; // Feature flag for languageModelToolSets (proposed API)
   };
   settings: Record<string, { 
     type: string; 
     description: string; 
     default?: any; 
     mcpMapping?: {
-      target: 'header' | 'env' | 'arg' | 'url-param';
+      target: 'header' | 'env' | 'arg' | 'url-param' | 'dynamic-arg';
       key: string;
       required?: boolean;
     };

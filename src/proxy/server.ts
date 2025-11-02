@@ -4,6 +4,7 @@ import path from 'path';
 import { MCPManager } from './mcp-manager.js';
 import { connectRoute, disconnectRoute, discoverRoute, testCapabilityRoute, getStatusRoute } from './routes/index.js';
 import { buildFromConfig, ExtensionConfig } from '../builder/vsix-builder.js';
+import { ENABLE_TOOLSETS } from '../common/feature-flags.js';
 
 // Transform UI config format to builder format
 function transformUIConfig(uiConfig: any): ExtensionConfig {
@@ -20,6 +21,9 @@ function transformUIConfig(uiConfig: any): ExtensionConfig {
     mappings: {
       tools: uiConfig.toolMappings || {},
       prompts: uiConfig.promptMappings || {},
+      toolSetName: uiConfig.toolSetName,
+      toolSetDescription: uiConfig.toolSetDescription,
+      enableToolSets: uiConfig.enableToolSets ?? ENABLE_TOOLSETS,
     },
     settings: uiConfig.extensionInfo?.settings?.reduce((acc: any, setting: any) => {
       acc[setting.key] = {

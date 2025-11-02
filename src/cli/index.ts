@@ -3,6 +3,7 @@
 import { Command } from 'commander';
 import { startServer } from '../proxy/server.js';
 import { buildFromConfig, ExtensionConfig } from '../builder/vsix-builder.js';
+import { ENABLE_TOOLSETS } from '../common/feature-flags.js';
 import open from 'open';
 import { readFile } from 'fs/promises';
 import { spawn } from 'child_process';
@@ -27,6 +28,9 @@ function transformUIConfig(uiConfig: any): ExtensionConfig {
     mappings: {
       tools: uiConfig.toolMappings || {},
       prompts: uiConfig.promptMappings || {},
+      toolSetName: uiConfig.toolSetName,
+      toolSetDescription: uiConfig.toolSetDescription,
+      enableToolSets: uiConfig.enableToolSets ?? ENABLE_TOOLSETS,
     },
     settings: uiConfig.extensionInfo?.settings?.reduce((acc: any, setting: any) => {
       acc[setting.key] = {

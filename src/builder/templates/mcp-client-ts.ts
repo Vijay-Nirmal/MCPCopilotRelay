@@ -11,33 +11,77 @@ ${transportType === 'sse' ? "import { SSEClientTransport } from '@modelcontextpr
 
 export class MCPClient {
   private client: Client | null = null;
+  private connecting: Promise<void> | null = null;
+  private config: vscode.WorkspaceConfiguration | null = null;
+
+  isConnected(): boolean {
+    return this.client !== null;
+  }
+
+  async ensureConnected(): Promise<void> {
+    if (this.client) {
+      return;
+    }
+    if (this.connecting) {
+      return this.connecting;
+    }
+    try {
+      await this.connect(this.config || undefined);
+      console.log('✅ MCP server connected on first use');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Failed to connect to MCP server on first use:');
+      console.error('Error:', errorMessage);
+      if (error instanceof Error && error.stack) {
+        console.error('Stack:', error.stack);
+      }
+      
+      // Re-throw to let the calling tool handle it
+      throw error;
+    }
+  }
 
   async connect(vsCodeConfig?: vscode.WorkspaceConfiguration): Promise<void> {
+    if (this.client) {
+      return; // Already connected
+    }
+
     const config = vsCodeConfig || vscode.workspace.getConfiguration('${config.extension.name}');
+    this.config = config;
     
-    this.client = new Client({
-      name: '${config.extension.name}',
-      version: '${config.extension.version}',
-    });
+    this.connecting = (async () => {
+      this.client = new Client({
+        name: '${config.extension.name}',
+        version: '${config.extension.version}',
+      });
 
 ${generateTransportConnection(config)}
 
-    await this.client.connect(transport);
+      await this.client.connect(transport);
+      this.connecting = null;
+    })();
+
+    await this.connecting;
   }
 
   async disconnect(): Promise<void> {
     if (this.client) {
       await this.client.close();
       this.client = null;
+      this.connecting = null;
+      this.config = null;
     }
   }
 
-  async callTool(name: string, args: any): Promise<any> {
-    if (!this.client) {
-      throw new Error('MCP client not connected');
-    }
+  async reconnect(vsCodeConfig?: vscode.WorkspaceConfiguration): Promise<void> {
+    await this.disconnect();
+    await this.connect(vsCodeConfig);
+  }
 
-    const result = await this.client.callTool({
+  async callTool(name: string, args: any): Promise<any> {
+    await this.ensureConnected();
+
+    const result = await this.client!.callTool({
       name,
       arguments: args,
     });
@@ -46,11 +90,9 @@ ${generateTransportConnection(config)}
   }
 
   async getPrompt(name: string, args?: any): Promise<any> {
-    if (!this.client) {
-      throw new Error('MCP client not connected');
-    }
+    await this.ensureConnected();
 
-    const result = await this.client.getPrompt({
+    const result = await this.client!.getPrompt({
       name,
       arguments: args,
     });
@@ -59,11 +101,9 @@ ${generateTransportConnection(config)}
   }
 
   async readResource(uri: string): Promise<any> {
-    if (!this.client) {
-      throw new Error('MCP client not connected');
-    }
+    await this.ensureConnected();
 
-    const result = await this.client.readResource({ uri });
+    const result = await this.client!.readResource({ uri });
     return result;
   }
 }
@@ -115,9 +155,23 @@ function generateTransportConnection(config: ExtensionConfig): string {
     }`
       ).join('\n') + '\n\n';
     }
+
+    // Generate dynamic arguments (appended at the end)
+    const dynamicArgSettings = Object.entries(config.settings)
+      .filter(([, s]) => s.mcpMapping?.target === 'dynamic-arg');
+    
+    const requiredDynamicArgSettings = dynamicArgSettings.filter(([, s]) => s.mcpMapping?.required);
+    if (requiredDynamicArgSettings.length > 0) {
+      validationCode += requiredDynamicArgSettings.map(([key]) => 
+        `    const ${key}DynArgValue = config.get<string>('${key}');
+    if (!${key}DynArgValue) {
+      throw new Error('Required setting "${key}" is not configured. Please set it in VS Code settings.');
+    }`
+      ).join('\n') + '\n\n';
+    }
     
     let argsCode = JSON.stringify(mcpConfig.args || []);
-    if (argSettings.length > 0) {
+    if (argSettings.length > 0 || dynamicArgSettings.length > 0) {
       argsCode = `[
       ...${JSON.stringify(mcpConfig.args || [])},
 ${argSettings.map(([key, s]) => {
@@ -125,6 +179,18 @@ ${argSettings.map(([key, s]) => {
     return `      \`${s.mcpMapping!.key}=\${${key}ArgValue}\`,`;
   } else {
     return `      config.get<string>('${key}') ? \`${s.mcpMapping!.key}=\${config.get<string>('${key}')}\` : null,`;
+  }
+}).join('\n')}${argSettings.length > 0 && dynamicArgSettings.length > 0 ? ',\n' : ''}${dynamicArgSettings.map(([key, s]) => {
+  if (s.mcpMapping?.required) {
+    // For required dynamic args, split the value by spaces and spread it
+    return `      ...${key}DynArgValue.split(' '),`;
+  } else {
+    // For optional dynamic args, split by spaces only if value exists
+    const varName = `${key}DynArgOptValue`;
+    return `      ...((() => {
+        const ${varName} = config.get<string>('${key}');
+        return ${varName} ? ${varName}.split(' ') : [];
+      })()),`;
   }
 }).join('\n')}
     ].filter(Boolean) as string[]`;
@@ -134,7 +200,9 @@ ${argSettings.map(([key, s]) => {
       command: '${mcpConfig.command}',
       args: ${argsCode},
       env: {
-        ...process.env,
+        ...(Object.fromEntries(
+          Object.entries(process.env).filter(([_, v]) => v !== undefined)
+        ) as Record<string, string>),
 ${envSettings || '        // No environment variable settings configured'}
       },
     });`;

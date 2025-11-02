@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { ENABLE_TOOLSETS } from '../../common/feature-flags.js';
 
 export interface MCPConfig {
   transport: 'stdio' | 'sse' | 'http';
@@ -53,8 +54,8 @@ export interface ExtensionSetting {
   
   // MCP Parameter mapping - how this setting value is used in MCP connection
   mcpMapping?: {
-    target: 'header' | 'env' | 'arg' | 'url-param'; // Where to inject the value
-    key: string; // The key/name in the target (e.g., header name, env var name)
+    target: 'header' | 'env' | 'arg' | 'url-param' | 'dynamic-arg'; // Where to inject the value
+    key: string; // The key/name in the target (e.g., header name, env var name, arg flag)
     required?: boolean; // Whether this is required for MCP connection
   };
   
@@ -76,6 +77,9 @@ interface WizardState {
   // Step 3: Map to VS Code
   toolMappings: Record<string, ToolMapping>;
   promptMappings: Record<string, PromptMapping>;
+  toolSetName: string;
+  toolSetDescription: string;
+  enableToolSets: boolean; // Feature flag for languageModelToolSets (proposed API)
 
   // Step 4: Extension Info
   extensionName: string;
@@ -134,6 +138,8 @@ interface WizardState {
   setDiscoveryError: (error: string | null) => void;
   setToolMappings: (mappings: Record<string, ToolMapping>) => void;
   setPromptMappings: (mappings: Record<string, PromptMapping>) => void;
+  setToolSetName: (name: string) => void;
+  setToolSetDescription: (description: string) => void;
   updateToolMapping: (name: string, updates: Partial<ToolMapping>) => void;
   updatePromptMapping: (name: string, updates: Partial<PromptMapping>) => void;
   setExtensionInfo: (info: {
@@ -181,6 +187,9 @@ const initialState = {
   discoveryError: null,
   toolMappings: {},
   promptMappings: {},
+  toolSetName: '',
+  toolSetDescription: '',
+  enableToolSets: ENABLE_TOOLSETS, // Feature flag - languageModelToolSets is a proposed API
   extensionInfo: {
     name: '',
     displayName: '',
@@ -233,6 +242,8 @@ export const useWizardStore = create<WizardState>((set, get) => ({
   setDiscoveryError: (error) => set({ discoveryError: error }),
   setToolMappings: (mappings) => set({ toolMappings: mappings }),
   setPromptMappings: (mappings) => set({ promptMappings: mappings }),
+  setToolSetName: (name) => set({ toolSetName: name }),
+  setToolSetDescription: (description) => set({ toolSetDescription: description }),
 
   updateToolMapping: (name, updates) =>
     set((state) => ({
@@ -296,6 +307,9 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       mappings: {
         tools: state.toolMappings,
         prompts: state.promptMappings,
+        toolSetName: state.toolSetName,
+        toolSetDescription: state.toolSetDescription,
+        enableToolSets: state.enableToolSets,
       },
       settings: state.extensionInfo.settings.reduce((acc, s) => {
         acc[s.key] = {
@@ -324,13 +338,23 @@ export const useWizardStore = create<WizardState>((set, get) => ({
   },
 
   importConfig: (config) => {
+    // Handle both old format (toolMappings/promptMappings at root) and new format (inside mappings object)
+    const toolMappings = config.mappings?.tools || config.toolMappings || {};
+    const promptMappings = config.mappings?.prompts || config.promptMappings || {};
+    const toolSetName = config.mappings?.toolSetName || '';
+    const toolSetDescription = config.mappings?.toolSetDescription || '';
+    const enableToolSets = config.mappings?.enableToolSets ?? ENABLE_TOOLSETS;
+    
     set({
-      mcpConfig: config.mcp || null,
+      mcpConfig: config.mcp || config.mcpConfig || null,
       isConnected: true, // Mark as connected since we're importing a valid config
       connectionError: null,
       capabilities: config.capabilities || null,
-      toolMappings: config.mappings?.tools || {},
-      promptMappings: config.mappings?.prompts || {},
+      toolMappings,
+      promptMappings,
+      toolSetName,
+      toolSetDescription,
+      enableToolSets,
       extensionInfo: {
         name: config.extension?.name || '',
         displayName: config.extension?.displayName || '',

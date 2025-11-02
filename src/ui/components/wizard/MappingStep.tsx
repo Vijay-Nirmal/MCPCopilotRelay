@@ -6,16 +6,63 @@ import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Wrench, MessageSquare, FileText, Info } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Wrench, MessageSquare, FileText, Info, CheckCheck, XCircle } from 'lucide-react';
+import { useEffect } from 'react';
+import { ENABLE_TOOLSETS } from '../../../common/feature-flags.js';
 
 export function MappingStep() {
   const {
     capabilities,
     toolMappings,
     promptMappings,
+    toolSetName,
+    toolSetDescription,
     setToolMappings,
     setPromptMappings,
+    setToolSetName,
+    setToolSetDescription,
   } = useWizardStore();
+
+  // Auto-select all tools when capabilities are first discovered
+  useEffect(() => {
+    if (capabilities?.tools && capabilities.tools.length > 0 && Object.keys(toolMappings).length === 0) {
+      const newMappings: Record<string, any> = {};
+      capabilities.tools.forEach((tool: any) => {
+        newMappings[tool.name] = {
+          name: tool.name,
+          toolId: tool.name,
+          selected: true,
+          type: 'lm-tool',
+          displayName: tool.name,
+          description: tool.description || '',
+        };
+      });
+      setToolMappings(newMappings);
+    }
+  }, [capabilities?.tools]);
+
+  // Select all tools
+  const handleSelectAllTools = () => {
+    if (!capabilities?.tools) return;
+    const newMappings: Record<string, any> = {};
+    capabilities.tools.forEach((tool: any) => {
+      newMappings[tool.name] = {
+        name: tool.name,
+        toolId: tool.name,
+        selected: true,
+        type: 'lm-tool',
+        displayName: tool.name,
+        description: tool.description || '',
+      };
+    });
+    setToolMappings(newMappings);
+  };
+
+  // Deselect all tools
+  const handleDeselectAllTools = () => {
+    setToolMappings({});
+  };
 
   // Handle tool mapping toggle
   const handleToolToggle = (toolName: string, checked: boolean) => {
@@ -157,12 +204,72 @@ export function MappingStep() {
         </AlertDescription>
       </Alert>
 
+      {/* Tool Set Configuration */}
+      {hasTools && Object.keys(toolMappings).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Tool Set Configuration</CardTitle>
+            <CardDescription>
+              Group all selected tools under a single tool set. This makes it easier for users to enable all your tools at once.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="toolset-name">Tool Set Name</Label>
+              <Input
+                id="toolset-name"
+                value={toolSetName}
+                onChange={(e) => setToolSetName(e.target.value)}
+                placeholder="e.g., my-mcp-tools"
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">
+                A unique identifier for this tool set. Must not contain whitespace (use hyphens or underscores).
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="toolset-description">Tool Set Description</Label>
+              <Textarea
+                id="toolset-description"
+                value={toolSetDescription}
+                onChange={(e) => setToolSetDescription(e.target.value)}
+                placeholder="A description of what this tool set provides"
+                rows={2}
+              />
+              <p className="text-xs text-muted-foreground">
+                Describe the capabilities provided by this tool set.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tools Section */}
       {hasTools && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Wrench className="w-5 h-5" />
-            <h3 className="text-xl font-semibold">Tools ({capabilities.tools?.length || 0})</h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wrench className="w-5 h-5" />
+              <h3 className="text-xl font-semibold">Tools ({capabilities.tools?.length || 0})</h3>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSelectAllTools}
+              >
+                <CheckCheck className="w-4 h-4 mr-2" />
+                Select All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDeselectAllTools}
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Deselect All
+              </Button>
+            </div>
           </div>
           
           <div className="grid gap-4">

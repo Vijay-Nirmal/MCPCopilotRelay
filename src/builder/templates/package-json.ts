@@ -99,11 +99,18 @@ export function generatePackageJson(config: ExtensionConfig) {
     };
   }
 
+  // Add autoConnect setting (always first)
+  packageJson.contributes.configuration.properties[`${config.extension.name}.autoConnect`] = {
+    type: 'boolean',
+    description: 'Automatically connect to MCP server when VS Code starts. If disabled, the server will connect on first tool use.',
+    default: false,
+  };
+
   // Add configuration settings
   for (const [key, setting] of Object.entries(config.settings)) {
     packageJson.contributes.configuration.properties[`${config.extension.name}.${key}`] = {
       type: setting.type,
-      description: setting.description,
+      markdownDescription: setting.description,
       default: setting.default,
     };
   }
@@ -168,6 +175,33 @@ export function generatePackageJson(config: ExtensionConfig) {
 
   if (lmTools.length > 0) {
     packageJson.contributes.languageModelTools = lmTools;
+    
+    // Add languageModelToolSets if feature flag is enabled (proposed API)
+    // Note: languageModelToolSets requires the 'contribLanguageModelToolSets' proposed API
+    if (config.mappings.enableToolSets && config.mappings.toolSetName && config.mappings.toolSetName.trim() !== '') {
+      const toolSetName = config.mappings.toolSetName.trim();
+      const toolSetDescription = config.mappings.toolSetDescription?.trim() || 
+        `A set of tools provided by ${config.extension.displayName}`;
+      
+      // Collect all tool reference names (toolIds) for the tool set
+      const toolReferences: string[] = [];
+      for (const [toolName, mapping] of Object.entries(config.mappings.tools)) {
+        if (mapping.type === 'lm-tool') {
+          const toolId = mapping.toolId || toolName;
+          toolReferences.push(toolId);
+        }
+      }
+      
+      if (toolReferences.length > 0) {
+        packageJson.contributes.languageModelToolSets = [
+          {
+            name: toolSetName,
+            description: toolSetDescription,
+            tools: toolReferences,
+          }
+        ];
+      }
+    }
   }
 
   // Add commands for tool mappings

@@ -20,6 +20,9 @@ export function PreviewBuildStep() {
     capabilities,
     toolMappings,
     promptMappings,
+    toolSetName,
+    toolSetDescription,
+    enableToolSets,
     extensionInfo,
     isBuilding,
     buildError,
@@ -41,6 +44,9 @@ export function PreviewBuildStep() {
         capabilities,
         toolMappings,
         promptMappings,
+        toolSetName,
+        toolSetDescription,
+        enableToolSets,
         extensionInfo,
       };
 
@@ -99,6 +105,9 @@ export function PreviewBuildStep() {
         capabilities,
         toolMappings,
         promptMappings,
+        toolSetName,
+        toolSetDescription,
+        enableToolSets,
         extensionInfo,
         editedFiles, // Include any manually edited files
       };
@@ -193,6 +202,9 @@ export function PreviewBuildStep() {
       capabilities,
       toolMappings,
       promptMappings,
+      toolSetName,
+      toolSetDescription,
+      enableToolSets,
       extensionInfo,
     };
 
